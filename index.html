@@ -537,16 +537,6 @@
   <div class="tab-panel active" id="tab-today">
     <div id="today-date-row" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
 
-    <div class="card" id="import-helper-card" style="display:none;margin-bottom:16px;">
-      <div class="card-body">
-        <div class="section-title">首次导入</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-          如果同目录里已经有 <code>会话记录.csv</code>，可以先尝试一键导入。若浏览器限制本地读取，再使用“记录”页里的手动导入。
-        </div>
-        <button class="btn btn-secondary" style="flex:0;padding:9px 16px;" onclick="importBundledCSV()">从同目录会话记录.csv 导入</button>
-      </div>
-    </div>
-
     <div class="stats-bar" style="margin-bottom:16px;">
       <div class="stat-cell">
         <div class="stat-label">今日累计</div>
@@ -1205,10 +1195,6 @@ function renderToday() {
   document.getElementById('today-count').innerHTML = `${sessions.length}<span class="stat-unit">次</span>`;
   document.getElementById('today-streak').innerHTML = `${calcStreak()}<span class="stat-unit">天</span>`;
 
-  const importHelper = document.getElementById('import-helper-card');
-  const hasAnyData = getSessions().length > 0 || !!getActive();
-  importHelper.style.display = hasAnyData ? 'none' : '';
-
   // Recent 3
   const allDone = getSessions().filter(s => s.status === 'completed')
     .map(s => ({ ...s, date: normalizeDateValue(s.date) }))
@@ -1694,17 +1680,6 @@ function importCSV(event) {
     event.target.value = '';
   };
   reader.readAsText(file, 'utf-8');
-}
-
-async function importBundledCSV() {
-  try {
-    const res = await fetch('./会话记录.csv', { cache: 'no-store' });
-    if (!res.ok) throw new Error('fetch failed');
-    const text = await res.text();
-    processCSVText(text);
-  } catch (err) {
-    showToast('未能自动读取同目录会话记录.csv。若是本地双击打开，请改用“记录”页手动导入。', 'warning');
-  }
 }
 
 // ════════════════════════════════════════════════════════
