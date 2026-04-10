@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学习计时</title>
+<title>活动计时</title>
 <style>
   :root {
     --bg: #F4F6F8;
@@ -245,6 +245,13 @@
     font-size: 12px; transition: all 0.15s;
   }
   .btn-del:hover { background: var(--red-soft); color: var(--red); }
+  .row-actions { display:flex; align-items:center; gap:4px; justify-content:flex-end; }
+  .btn-edit {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); padding: 4px 6px; border-radius: 4px;
+    font-size: 12px; transition: all 0.15s;
+  }
+  .btn-edit:hover { background: var(--accent-soft); color: var(--accent); }
 
   /* ── Add Record Modal ── */
   .modal-overlay {
@@ -275,11 +282,99 @@
   .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
   .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
   .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .voice-status {
+    display: none;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-mid);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .voice-status.active { display: block; }
+  .field-inline { display:flex; gap:8px; align-items:center; }
+  .field-inline .field-select { flex:1; min-width:0; }
+  .inline-actions { display:flex; gap:8px; flex:0 0 auto; }
+  .inline-actions .btn {
+    flex:0;
+    min-width:48px;
+    height:32px;
+    padding:0 10px;
+    font-size:11px;
+    white-space:nowrap;
+    border-radius:999px;
+  }
+  .manager-list { display:flex; flex-direction:column; gap:10px; }
+  .manager-row { display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center; }
+  .manager-actions { display:flex; gap:6px; }
+  .manager-actions button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--ink-2);
+    border-radius: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .manager-actions button:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── Stats Tab ── */
   .stats-cards {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
     margin-bottom: 20px;
+  }
+  .stats-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .stats-summary {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  .summary-item:hover { border-color: var(--accent-mid); transform: translateY(-1px); }
+  .summary-item.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .summary-item.empty { cursor: default; }
+  .summary-item.empty:hover { transform: none; border-color: var(--border); }
+  .summary-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .summary-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .summary-item-time {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .summary-item-meta {
+    font-size: 11px;
+    color: var(--muted);
   }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
@@ -299,8 +394,16 @@
 
   /* Heatmap */
   .heatmap-scroll { overflow-x: auto; }
-  .heatmap { display: flex; gap: 3px; }
-  .heatmap-col { display: flex; flex-direction: column; gap: 3px; }
+  .heatmap { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
+  .heatmap-row { display: flex; align-items: center; gap: 8px; }
+  .heatmap-month-tag {
+    width: 34px;
+    flex: 0 0 34px;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .heatmap-days { display: flex; gap: 3px; }
   .heatmap-cell {
     width: 13px; height: 13px; border-radius: 2px;
     background: var(--heat-0);
@@ -312,10 +415,6 @@
   .heatmap-cell[data-lvl="3"] { background: var(--heat-3); }
   .heatmap-cell[data-lvl="4"] { background: var(--heat-4); }
   .heatmap-cell[data-future="1"] { background: transparent; }
-  .heatmap-month-labels {
-    display: flex; gap: 3px; margin-bottom: 4px;
-    font-size: 10px; color: var(--muted);
-  }
   .heatmap-legend {
     display: flex; align-items: center; gap: 4px;
     font-size: 11px; color: var(--muted);
@@ -325,16 +424,44 @@
 
   /* Bar chart */
   .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
-  .bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    height: 100%;
+  }
   .bar-fill {
     width: 100%; border-radius: 3px 3px 0 0;
     background: var(--accent-mid);
     min-height: 2px;
     transition: background 0.2s;
     position: relative;
+    cursor: pointer;
   }
   .bar-fill:hover { background: var(--accent); }
-  .bar-label { font-size: 9px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+  .bar-fill.active {
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .bar-label {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 4px;
+    white-space: nowrap;
+    height: 12px;
+    line-height: 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .chart-detail {
+    margin-top: 10px;
+    min-height: 18px;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
 
   /* ── Toast ── */
   .toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
@@ -379,11 +506,15 @@
   /* ── Responsive ── */
   @media (max-width: 600px) {
     .stats-cards { grid-template-columns: repeat(2, 1fr); }
+    .stats-summary { grid-template-columns: 1fr; }
     .field-row { grid-template-columns: 1fr; }
     .modal-row { grid-template-columns: 1fr; }
     .bar-label { font-size: 8px; }
     .app-body { padding: 16px 14px 60px; }
     .timer-display { font-size: 34px; }
+    .field-inline { align-items:stretch; }
+    .field-inline .inline-actions { width: 100%; }
+    .field-inline .inline-actions .btn { width: 100%; }
   }
 </style>
 </head>
@@ -391,7 +522,7 @@
 
 <header class="app-header">
   <div class="header-inner">
-    <span class="app-title">学习计时</span>
+    <span class="app-title">活动计时</span>
     <nav class="tabs">
       <button class="tab-btn active" data-tab="today">今日</button>
       <button class="tab-btn" data-tab="log">记录</button>
@@ -426,7 +557,7 @@
         <div class="stat-value" id="today-count">—<span class="stat-unit">次</span></div>
       </div>
       <div class="stat-cell">
-        <div class="stat-label">连续学习</div>
+        <div class="stat-label">连续打卡</div>
         <div class="stat-value" id="today-streak">—<span class="stat-unit">天</span></div>
       </div>
     </div>
@@ -441,27 +572,25 @@
 
         <div class="field-row">
           <div class="field-group">
-            <label class="field-label">内容类型</label>
-            <select class="field-select" id="content-note-sel">
-              <option value="">请选择或输入</option>
-              <option value="影子跟读">影子跟读</option>
-              <option value="文章串联">文章串联</option>
-              <option value="背诵全文">背诵全文</option>
-              <option value="知识沉淀">知识沉淀</option>
-              <option value="逐句解析">逐句解析</option>
-              <option value="__custom__">自定义…</option>
-            </select>
-            <input class="field-input" id="content-note-input" placeholder="输入内容类型" style="display:none;margin-top:6px;">
+            <label class="field-label">活动分类</label>
+            <div class="field-inline">
+              <select class="field-select" id="content-note-sel"></select>
+              <div class="inline-actions">
+                <button class="btn btn-secondary" type="button" onclick="openContentTypeManager()">编辑</button>
+              </div>
+            </div>
+            <input class="field-input" id="content-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
           </div>
           <div class="field-group">
-            <label class="field-label">文章标题</label>
-            <input class="field-input" id="article-title-input" placeholder="例：Training AI">
+            <label class="field-label">事项名称</label>
+            <input class="field-input" id="article-title-input" placeholder="例：网球发球练习" list="article-title-options">
+            <datalist id="article-title-options"></datalist>
           </div>
         </div>
 
         <div class="btn-row" id="btn-row">
-          <button class="btn btn-start" id="btn-start" onclick="startSession()">▶ 开始学习</button>
-          <button class="btn btn-end" id="btn-end" style="display:none;" onclick="endSession()">■ 结束学习</button>
+          <button class="btn btn-start" id="btn-start" onclick="startSession()">▶ 开始计时</button>
+          <button class="btn btn-end" id="btn-end" style="display:none;" onclick="endSession()">■ 结束计时</button>
         </div>
       </div>
     </div>
@@ -485,13 +614,14 @@
       <input type="date" id="filter-date" placeholder="筛选日期">
       <select id="filter-note" style="min-width:120px;">
         <option value="">全部类型</option>
-        <option value="影子跟读">影子跟读</option>
-        <option value="文章串联">文章串联</option>
-        <option value="背诵全文">背诵全文</option>
-        <option value="知识沉淀">知识沉淀</option>
-        <option value="逐句解析">逐句解析</option>
+        <option value="工作">工作</option>
+        <option value="学习">学习</option>
+        <option value="运动">运动</option>
+        <option value="创作">创作</option>
+        <option value="练习">练习</option>
       </select>
       <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openAddModal()">＋ 手动补录</button>
+      <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openVoiceAddModal()">🎤 语音补录</button>
       <div style="margin-left:auto;display:flex;gap:8px;">
         <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="exportCSV()">↓ 导出 CSV</button>
         <label class="btn btn-secondary" style="flex:0;padding:7px 14px;cursor:pointer;">
@@ -511,7 +641,7 @@
               <th>结束</th>
               <th>时长</th>
               <th>内容</th>
-              <th>文章</th>
+              <th>事项</th>
               <th></th>
             </tr>
           </thead>
@@ -531,13 +661,16 @@
       <button class="year-btn" onclick="changeYear(1)">›</button>
     </div>
 
+    <div class="stats-toolbar">
+      <select id="stats-category-filter" class="field-select" style="min-width:180px;"></select>
+    </div>
+
     <div class="stats-cards" id="stats-cards"></div>
 
+    <div class="stats-summary" id="stats-summary"></div>
+
     <div class="chart-wrap">
-      <div class="chart-title" id="heatmap-title">全年学习热力图</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
-        <span id="heatmap-month-labels" style="display:flex;gap:0;"></span>
-      </div>
+      <div class="chart-title" id="heatmap-title">全年活动热力图</div>
       <div class="heatmap-scroll">
         <div class="heatmap" id="heatmap"></div>
       </div>
@@ -553,13 +686,15 @@
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title">近 30 天每日时长（分钟）</div>
+      <div class="chart-title" id="daily-chart-title">当月每日时长（小时）</div>
       <div class="bar-chart" id="bar-chart-daily"></div>
+      <div class="chart-detail" id="daily-chart-detail">点击柱子查看具体数值</div>
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title" id="monthly-chart-title">各月学习时长（小时）</div>
+      <div class="chart-title" id="monthly-chart-title">各月累计时长（小时）</div>
       <div class="bar-chart" id="bar-chart-monthly"></div>
+      <div class="chart-detail" id="monthly-chart-detail">点击柱子查看具体数值</div>
     </div>
   </div>
 
@@ -569,10 +704,11 @@
 <div class="modal-overlay" id="add-modal">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">手动补录记录</span>
+      <span class="modal-title" id="modal-title">手动补录记录</span>
       <button class="modal-close" onclick="closeAddModal()">×</button>
     </div>
     <div class="modal-body">
+      <div class="voice-status" id="voice-status"></div>
       <div class="field-group">
         <label class="field-label">日期 *</label>
         <input type="date" class="field-input" id="m-date">
@@ -589,28 +725,43 @@
       </div>
       <div class="modal-row">
         <div class="field-group">
-          <label class="field-label">内容类型</label>
-          <select class="field-select" id="m-note-sel">
-            <option value="">请选择</option>
-            <option value="影子跟读">影子跟读</option>
-            <option value="文章串联">文章串联</option>
-            <option value="背诵全文">背诵全文</option>
-            <option value="知识沉淀">知识沉淀</option>
-            <option value="逐句解析">逐句解析</option>
-            <option value="__custom__">自定义…</option>
-          </select>
-          <input class="field-input" id="m-note-input" placeholder="输入内容类型" style="display:none;margin-top:6px;">
+          <label class="field-label">活动分类</label>
+          <div class="field-inline">
+            <select class="field-select" id="m-note-sel"></select>
+            <div class="inline-actions">
+              <button class="btn btn-secondary" type="button" onclick="openContentTypeManager()">编辑</button>
+            </div>
+          </div>
+          <input class="field-input" id="m-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
         </div>
         <div class="field-group">
-          <label class="field-label">文章标题</label>
-          <input type="text" class="field-input" id="m-article">
+          <label class="field-label">事项名称</label>
+          <input type="text" class="field-input" id="m-article" list="article-title-options">
         </div>
       </div>
       <div id="m-duration-preview" style="font-size:12px;color:var(--muted);"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeAddModal()">取消</button>
-      <button class="btn btn-start" style="flex:0;padding:9px 18px;" onclick="saveManualRecord()">保存</button>
+      <button class="btn btn-start" style="flex:0;padding:9px 18px;" id="modal-save-btn" onclick="saveManualRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="content-type-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">管理活动分类</span>
+      <button class="modal-close" onclick="closeContentTypeManager()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--muted);">这里的顺序会同步到所有下拉框，并保存在当前浏览器本地。</div>
+      <div class="manager-list" id="content-type-list"></div>
+      <button class="btn btn-secondary" type="button" style="flex:0;width:max-content;" onclick="addContentTypeRow()">＋ 新增一个类型</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeContentTypeManager()">取消</button>
+      <button class="btn btn-start" style="flex:0;padding:9px 18px;" onclick="saveContentTypeManager()">保存</button>
     </div>
   </div>
 </div>
@@ -624,11 +775,17 @@
 // ════════════════════════════════════════════════════════
 const STORAGE_KEY = 'english_sessions';
 const ACTIVE_KEY  = 'english_active_session';
-
-const CONTENT_NOTE_OPTIONS = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
+const CONTENT_TYPE_KEY = 'english_content_types';
+const ARTICLE_TITLES_KEY = 'english_article_titles';
+const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习'];
+const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
 
 let timerInterval = null;
 let statsYear = null; // set on init to latest data year
+let editingRecordId = null;
+let recognition = null;
+let recognitionActive = false;
+let statsCategoryFilter = '';
 
 // ════════════════════════════════════════════════════════
 // STORAGE HELPERS
@@ -648,6 +805,90 @@ function saveActive(obj) {
   if (obj) localStorage.setItem(ACTIVE_KEY, JSON.stringify(obj));
   else localStorage.removeItem(ACTIVE_KEY);
 }
+function normalizeCategoryValue(value) {
+  const text = String(value || '').trim();
+  return LEGACY_ENGLISH_CATEGORIES.includes(text) ? '英语学习' : text;
+}
+function normalizeDateValue(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const normalized = text
+    .replace(/[./]/g, '-')
+    .replace(/年/g, '-')
+    .replace(/月/g, '-')
+    .replace(/日/g, '')
+    .replace(/\s+/g, '');
+  const match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return text;
+  return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`;
+}
+function getContentTypeOptions() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CONTENT_TYPE_KEY) || 'null');
+    if (Array.isArray(stored)) {
+      const cleaned = stored.map(v => normalizeCategoryValue(v)).filter(Boolean);
+      if (cleaned.length) return [...new Set(cleaned)];
+    }
+  } catch {}
+  return [...DEFAULT_CONTENT_NOTE_OPTIONS];
+}
+function saveContentTypeOptions(arr) {
+  const cleaned = [...new Set(arr.map(v => normalizeCategoryValue(v)).filter(Boolean))];
+  localStorage.setItem(CONTENT_TYPE_KEY, JSON.stringify(cleaned.length ? cleaned : DEFAULT_CONTENT_NOTE_OPTIONS));
+}
+function ensureContentTypeExists(value) {
+  const text = normalizeCategoryValue(value);
+  if (!text) return;
+  const options = getContentTypeOptions();
+  if (!options.includes(text)) {
+    options.push(text);
+    saveContentTypeOptions(options);
+  }
+}
+function getArticleTitles() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ARTICLE_TITLES_KEY) || '[]');
+    if (Array.isArray(stored)) return [...new Set(stored.map(v => String(v || '').trim()).filter(Boolean))];
+  } catch {}
+  return [];
+}
+function rememberArticleTitle(value) {
+  const text = String(value || '').trim();
+  if (!text) return;
+  const titles = getArticleTitles().filter(item => item !== text);
+  titles.unshift(text);
+  localStorage.setItem(ARTICLE_TITLES_KEY, JSON.stringify(titles.slice(0, 100)));
+}
+function hydratePreferencesFromSessions() {
+  const sessions = getSessions();
+  const migratedSessions = sessions.map(session => ({
+    ...session,
+    date: normalizeDateValue(session.date),
+    content_note: normalizeCategoryValue(session.content_note)
+  }));
+  if (JSON.stringify(migratedSessions) !== JSON.stringify(sessions)) {
+    saveSessions(migratedSessions);
+  }
+  const active = getActive();
+  if (active) {
+    const migratedActive = {
+      ...active,
+      date: normalizeDateValue(active.date),
+      content_note: normalizeCategoryValue(active.content_note)
+    };
+    if (JSON.stringify(migratedActive) !== JSON.stringify(active)) saveActive(migratedActive);
+  }
+  const mergedTypes = [...DEFAULT_CONTENT_NOTE_OPTIONS];
+  const mergedTitles = getArticleTitles();
+  migratedSessions.forEach(session => {
+    const note = normalizeCategoryValue(session.content_note);
+    const article = String(session.article_title || '').trim();
+    if (note && !mergedTypes.includes(note)) mergedTypes.push(note);
+    if (article && !mergedTitles.includes(article)) mergedTitles.push(article);
+  });
+  saveContentTypeOptions(mergedTypes);
+  localStorage.setItem(ARTICLE_TITLES_KEY, JSON.stringify(mergedTitles.slice(0, 100)));
+}
 
 // ════════════════════════════════════════════════════════
 // DATE / TIME HELPERS  (all local time, matching CSV)
@@ -664,7 +905,7 @@ function localTimeStr(d = new Date()) {
 }
 function timeStrToDate(dateStr, timeStr) {
   // dateStr: "2026-04-09", timeStr: "16:33:09"
-  return new Date(dateStr + 'T' + timeStr);
+  return new Date(normalizeDateValue(dateStr) + 'T' + timeStr);
 }
 function diffMinutesFloor(start, end) {
   // matches Python int(float(...)) = floor
@@ -675,6 +916,10 @@ function fmtMinutes(m) {
   const h = Math.floor(m / 60), mm = m % 60;
   if (h > 0) return `${h}h ${mm}m`;
   return `${mm}m`;
+}
+function fmtHours(minutes, digits = 1) {
+  const hours = (Number(minutes) || 0) / 60;
+  return `${hours.toFixed(digits)}h`;
 }
 function fmtElapsed(ms) {
   const s = Math.floor(ms / 1000);
@@ -694,20 +939,90 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+function toFullTime(value) {
+  if (!value) return '';
+  return value.length === 5 ? value + ':00' : value;
+}
+function toInputTime(value) {
+  return value ? value.slice(0, 5) : '';
+}
+function renderContentTypeSelect(selectId, includeEmptyLabel = '请选择', emptyValue = '', keepValue = '') {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const current = keepValue || sel.value;
+  const options = getContentTypeOptions();
+  sel.innerHTML =
+    `<option value="${escapeHtml(emptyValue)}">${escapeHtml(includeEmptyLabel)}</option>` +
+    options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('') +
+    '<option value="__custom__">自定义…</option>';
+  if (current && (options.includes(current) || current === '__custom__' || current === emptyValue)) {
+    sel.value = current;
+  } else if (current) {
+    sel.value = '__custom__';
+  } else {
+    sel.value = emptyValue;
+  }
+}
+function refreshContentTypeUI() {
+  renderContentTypeSelect('content-note-sel', '请选择或输入');
+  renderContentTypeSelect('m-note-sel', '请选择');
+  const filter = document.getElementById('filter-note');
+  const current = filter.value;
+  filter.innerHTML = '<option value="">全部类型</option>' +
+    getContentTypeOptions().map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
+  if (current && getContentTypeOptions().includes(current)) filter.value = current;
+  const statsFilter = document.getElementById('stats-category-filter');
+  if (statsFilter) {
+    const keepValue = getContentTypeOptions().includes(statsCategoryFilter) ? statsCategoryFilter : '';
+    statsFilter.innerHTML = '<option value="">全部分类</option>' +
+      getContentTypeOptions().map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
+    statsFilter.value = keepValue;
+    statsCategoryFilter = keepValue;
+  }
+}
+function refreshArticleTitleUI() {
+  const list = document.getElementById('article-title-options');
+  list.innerHTML = getArticleTitles().map(title => `<option value="${escapeHtml(title)}"></option>`).join('');
+}
+function setModalContentNote(value) {
+  const sel = document.getElementById('m-note-sel');
+  const inp = document.getElementById('m-note-input');
+  const options = getContentTypeOptions();
+  if (options.includes(value)) {
+    sel.value = value;
+    inp.value = '';
+    inp.style.display = 'none';
+  } else if (value) {
+    sel.value = '__custom__';
+    inp.value = value;
+    inp.style.display = '';
+  } else {
+    sel.value = '';
+    inp.value = '';
+    inp.style.display = 'none';
+  }
+}
+function getModalContentNote() {
+  const sel = document.getElementById('m-note-sel').value;
+  const inp = document.getElementById('m-note-input').value.trim();
+  return normalizeCategoryValue(sel === '__custom__' ? inp : sel);
+}
 
 // ════════════════════════════════════════════════════════
 // SESSIONS LOGIC
 // ════════════════════════════════════════════════════════
 function todaySessions() {
   const t = todayStr();
-  return getSessions().filter(s => s.date === t && s.status === 'completed');
+  return getSessions().filter(s => normalizeDateValue(s.date) === t && s.status === 'completed');
 }
 function todayMinutes() {
   return todaySessions().reduce((a, s) => a + (parseInt(s.duration_minutes) || 0), 0);
 }
 
-function calcStreak() {
-  const sessions = getSessions().filter(s => s.status === 'completed' && s.duration_minutes > 0);
+function calcStreakFromSessions(sessionList) {
+  const sessions = sessionList
+    .filter(s => s.status === 'completed' && s.duration_minutes > 0)
+    .map(s => ({ ...s, content_note: normalizeCategoryValue(s.content_note) }));
   const days = [...new Set(sessions.map(s => s.date))].sort();
   if (!days.length) return 0;
   const today = todayStr();
@@ -735,20 +1050,25 @@ function calcStreak() {
   }
   return streak;
 }
+function calcStreak() {
+  return calcStreakFromSessions(getSessions());
+}
 
 // ════════════════════════════════════════════════════════
 // ACTIVE SESSION
 // ════════════════════════════════════════════════════════
 function startSession() {
   const existing = getActive();
-  if (existing) { showToast('当前已有进行中的学习会话，请先结束', 'error'); return; }
+  if (existing) { showToast('当前已有进行中的计时，请先结束', 'error'); return; }
 
   const note = getContentNote();
   const article = document.getElementById('article-title-input').value.trim();
+  ensureContentTypeExists(note);
+  rememberArticleTitle(article);
   const now = new Date();
   const session = {
     id: uid(),
-    date: localDateStr(now),
+    date: normalizeDateValue(localDateStr(now)),
     start_time: localTimeStr(now),
     end_time: '',
     duration_minutes: '',
@@ -757,7 +1077,9 @@ function startSession() {
     status: 'active'
   };
   saveActive(session);
-  showToast('学习开始！', 'success');
+  refreshContentTypeUI();
+  refreshArticleTitleUI();
+  showToast('计时开始', 'success');
   updateTimerUI();
   startTick();
 }
@@ -775,6 +1097,8 @@ function endSession() {
   // Supplement note/article if user filled after starting
   const note = getContentNote() || active.content_note;
   const article = document.getElementById('article-title-input').value.trim() || active.article_title;
+  ensureContentTypeExists(note);
+  rememberArticleTitle(article);
 
   const completed = {
     ...active,
@@ -789,9 +1113,11 @@ function endSession() {
   sessions.push(completed);
   saveSessions(sessions);
   saveActive(null);
+  refreshContentTypeUI();
+  refreshArticleTitleUI();
 
   clearInterval(timerInterval); timerInterval = null;
-  showToast(`学习结束，本次 ${fmtMinutes(dur)}`, 'success');
+  showToast(`计时结束，本次 ${fmtMinutes(dur)}`, 'success');
   resetInputs();
   updateTimerUI();
   renderAll();
@@ -838,13 +1164,14 @@ function updateTimerUI() {
 
   if (active) {
     dot.classList.add('active');
-    text.textContent = '学习中';
+    text.textContent = '进行中';
     display.classList.add('active');
     btnStart.style.display = 'none';
     btnEnd.style.display = '';
     // Restore fields
     const sel = document.getElementById('content-note-sel');
-    if (CONTENT_NOTE_OPTIONS.includes(active.content_note)) {
+    const options = getContentTypeOptions();
+    if (options.includes(active.content_note)) {
       sel.value = active.content_note;
     } else if (active.content_note) {
       sel.value = '__custom__';
@@ -884,6 +1211,7 @@ function renderToday() {
 
   // Recent 3
   const allDone = getSessions().filter(s => s.status === 'completed')
+    .map(s => ({ ...s, date: normalizeDateValue(s.date) }))
     .sort((a,b) => (b.date+b.start_time).localeCompare(a.date+a.start_time));
   const recent = allDone.slice(0, 3);
   const el = document.getElementById('recent-list');
@@ -894,6 +1222,9 @@ function renderToday() {
       <span class="record-duration">${fmtMinutes(s.duration_minutes)}</span>
       ${s.content_note ? `<span class="badge badge-note">${escapeHtml(s.content_note)}</span>` : ''}
       <span class="record-note">${escapeHtml(s.article_title || '')}</span>
+      <div class="row-actions">
+        <button class="btn-edit" onclick="openAddModal('${s.id}')" title="编辑">编辑</button>
+      </div>
     </div>
   `).join('');
 }
@@ -904,6 +1235,7 @@ function renderToday() {
 function renderLog() {
   let sessions = getSessions()
     .filter(s => s.status === 'completed')
+    .map(s => ({ ...s, date: normalizeDateValue(s.date) }))
     .sort((a,b) => (b.date+b.start_time).localeCompare(a.date+a.start_time));
 
   const fDate = document.getElementById('filter-date').value;
@@ -924,7 +1256,12 @@ function renderLog() {
       <td class="td-mono" style="font-weight:600;">${s.duration_minutes != null && s.duration_minutes !== '' ? escapeHtml(s.duration_minutes) + ' 分' : '—'}</td>
       <td>${s.content_note ? `<span class="badge badge-note">${escapeHtml(s.content_note)}</span>` : '<span class="td-muted">—</span>'}</td>
       <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title || '—')}</td>
-      <td><button class="btn-del" onclick="deleteRecord('${s.id}')" title="删除">✕</button></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-edit" onclick="openAddModal('${s.id}')" title="编辑">编辑</button>
+          <button class="btn-del" onclick="deleteRecord('${s.id}')" title="删除">✕</button>
+        </div>
+      </td>
     </tr>
   `).join('');
 }
@@ -940,52 +1277,81 @@ function deleteRecord(id) {
 // ════════════════════════════════════════════════════════
 // MANUAL ADD
 // ════════════════════════════════════════════════════════
-function openAddModal() {
-  const today = todayStr();
-  document.getElementById('m-date').value = today;
-  document.getElementById('m-start').value = '';
-  document.getElementById('m-end').value = '';
-  document.getElementById('m-note-sel').value = '';
-  document.getElementById('m-note-input').value = '';
-  document.getElementById('m-note-input').style.display = 'none';
-  document.getElementById('m-article').value = '';
-  document.getElementById('m-duration-preview').textContent = '';
+function openAddModal(recordId = null) {
+  editingRecordId = recordId;
+  const record = recordId ? getSessions().find(s => s.id === recordId) : null;
+  document.getElementById('modal-title').textContent = record ? '编辑记录' : '手动补录记录';
+  document.getElementById('modal-save-btn').textContent = record ? '保存修改' : '保存';
+  document.getElementById('m-date').value = record?.date || todayStr();
+  document.getElementById('m-start').value = toInputTime(record?.start_time || '');
+  document.getElementById('m-end').value = toInputTime(record?.end_time || '');
+  setModalContentNote(record?.content_note || '');
+  document.getElementById('m-article').value = record?.article_title || '';
+  setVoiceStatus('');
+  updateDurationPreview();
   document.getElementById('add-modal').classList.add('open');
 }
+function openVoiceAddModal() {
+  openAddModal();
+  startVoiceFill();
+}
 function closeAddModal() {
+  stopVoiceFill(false);
+  editingRecordId = null;
+  setVoiceStatus('');
   document.getElementById('add-modal').classList.remove('open');
 }
 function saveManualRecord() {
-  const date    = document.getElementById('m-date').value;
+  const isEditing = !!editingRecordId;
+  const date    = normalizeDateValue(document.getElementById('m-date').value);
   const start   = document.getElementById('m-start').value;
   const end     = document.getElementById('m-end').value;
-  const noteSel = document.getElementById('m-note-sel').value;
-  const noteIn  = document.getElementById('m-note-input').value.trim();
+  const note    = getModalContentNote();
   const article = document.getElementById('m-article').value.trim();
 
   if (!date || !start || !end) { showToast('日期、开始和结束时间为必填项', 'error'); return; }
 
-  // Format HH:MM to HH:MM:SS
-  const startFull = start.length === 5 ? start + ':00' : start;
-  const endFull   = end.length === 5 ? end + ':00' : end;
+  const startFull = toFullTime(start);
+  const endFull   = toFullTime(end);
 
   const startDt = timeStrToDate(date, startFull);
   const endDt   = timeStrToDate(date, endFull);
   let dur = diffMinutesFloor(startDt, endDt);
   if (dur < 0) { showToast('结束时间不能早于开始时间', 'error'); return; }
-
-  const note = (noteSel === '__custom__') ? noteIn : noteSel;
-
-  const record = {
-    id: uid(), date, start_time: startFull, end_time: endFull,
-    duration_minutes: dur, content_note: note, article_title: article, status: 'completed'
-  };
+  ensureContentTypeExists(note);
+  rememberArticleTitle(article);
   const sessions = getSessions();
-  sessions.push(record);
+  if (editingRecordId) {
+    const idx = sessions.findIndex(s => s.id === editingRecordId);
+    if (idx === -1) { showToast('未找到要编辑的记录', 'error'); return; }
+    sessions[idx] = {
+      ...sessions[idx],
+      date,
+      start_time: startFull,
+      end_time: endFull,
+      duration_minutes: dur,
+      content_note: note,
+      article_title: article,
+      status: 'completed'
+    };
+  } else {
+    sessions.push({
+      id: uid(),
+      date,
+      start_time: startFull,
+      end_time: endFull,
+      duration_minutes: dur,
+      content_note: note,
+      article_title: article,
+      status: 'completed'
+    });
+  }
   saveSessions(sessions);
   closeAddModal();
+  refreshContentTypeUI();
+  refreshArticleTitleUI();
   renderAll();
-  showToast('补录成功', 'success');
+  showToast(isEditing ? '修改已保存' : '补录成功', 'success');
 }
 
 // Duration preview in modal
@@ -999,6 +1365,166 @@ function updateDurationPreview() {
   const e = timeStrToDate(date, end+':00');
   const d = diffMinutesFloor(s, e);
   el.textContent = d >= 0 ? `预计时长：${d} 分钟` : '⚠ 结束时间早于开始时间';
+}
+
+function openContentTypeManager() {
+  renderContentTypeManager();
+  document.getElementById('content-type-modal').classList.add('open');
+}
+function closeContentTypeManager() {
+  document.getElementById('content-type-modal').classList.remove('open');
+}
+function renderContentTypeManager(values = getContentTypeOptions()) {
+  const container = document.getElementById('content-type-list');
+  container.innerHTML = values.map((value, index) => `
+    <div class="manager-row" data-index="${index}">
+      <input class="field-input" value="${escapeHtml(value)}" placeholder="活动分类名称">
+      <div class="manager-actions">
+        <button type="button" onclick="moveContentTypeRow(${index}, -1)">↑</button>
+        <button type="button" onclick="moveContentTypeRow(${index}, 1)">↓</button>
+        <button type="button" onclick="deleteContentTypeRow(${index})">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+function getContentTypeManagerValues() {
+  return Array.from(document.querySelectorAll('#content-type-list .manager-row input'))
+    .map(input => input.value.trim())
+    .filter(Boolean);
+}
+function addContentTypeRow() {
+  const values = getContentTypeManagerValues();
+  values.push('');
+  renderContentTypeManager(values);
+}
+function moveContentTypeRow(index, delta) {
+  const values = getContentTypeManagerValues();
+  const target = index + delta;
+  if (target < 0 || target >= values.length) return;
+  [values[index], values[target]] = [values[target], values[index]];
+  renderContentTypeManager(values);
+}
+function deleteContentTypeRow(index) {
+  const values = getContentTypeManagerValues();
+  values.splice(index, 1);
+  renderContentTypeManager(values);
+}
+function saveContentTypeManager() {
+  const values = getContentTypeManagerValues();
+  saveContentTypeOptions(values);
+  refreshContentTypeUI();
+  closeContentTypeManager();
+  showToast('活动分类已更新', 'success');
+}
+
+function setVoiceStatus(text, active = false) {
+  const el = document.getElementById('voice-status');
+  el.textContent = text || '';
+  el.classList.toggle('active', !!text || active);
+}
+
+function stopVoiceFill(clearStatus = true) {
+  if (recognition && recognitionActive) recognition.stop();
+  recognitionActive = false;
+  if (clearStatus) setVoiceStatus('');
+}
+
+function startVoiceFill() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('当前浏览器不支持语音识别，请用 Chrome 打开', 'error');
+    return;
+  }
+  if (recognitionActive) {
+    stopVoiceFill();
+    return;
+  }
+  if (!recognition) {
+    recognition = new SR();
+    recognition.lang = 'zh-CN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const text = Array.from(event.results).map(r => r[0].transcript).join('').trim();
+      if (!text) return;
+      applySpeechToModal(text);
+    };
+    recognition.onerror = (event) => {
+      recognitionActive = false;
+      const msg = event.error === 'not-allowed'
+        ? '麦克风权限被拒绝，请在 Chrome 里允许麦克风后重试'
+        : '语音识别失败，请重试';
+      setVoiceStatus(msg, false);
+    };
+    recognition.onend = () => {
+      recognitionActive = false;
+      if (document.getElementById('voice-status').textContent === '正在听，请直接说一整句…') {
+        setVoiceStatus('已结束收音，可以继续手动调整字段');
+      }
+    };
+  }
+  setVoiceStatus('正在听，请直接说一整句…', true);
+  recognitionActive = true;
+  recognition.start();
+}
+
+function applySpeechToModal(text) {
+  const parsed = parseSpeechInput(text);
+  if (parsed.date) document.getElementById('m-date').value = parsed.date;
+  if (parsed.start) document.getElementById('m-start').value = parsed.start;
+  if (parsed.end) document.getElementById('m-end').value = parsed.end;
+  if (parsed.note) setModalContentNote(parsed.note);
+  if (parsed.article) document.getElementById('m-article').value = parsed.article;
+  updateDurationPreview();
+  setVoiceStatus(`已识别：${text}`);
+  showToast('语音内容已填入表单', 'success');
+}
+
+function parseSpeechInput(text) {
+  const raw = String(text || '').replace(/[，。；、]/g, ' ').replace(/\s+/g, ' ').trim();
+  const result = { date: '', start: '', end: '', note: '', article: '' };
+  const today = new Date();
+  const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
+
+  if (raw.includes('明天')) result.date = localDateStr(tomorrow);
+  else if (raw.includes('昨天')) result.date = localDateStr(yesterday);
+  else if (raw.includes('今天')) result.date = localDateStr(today);
+
+  for (const option of getContentTypeOptions()) {
+    if (raw.includes(option)) {
+      result.note = option;
+      break;
+    }
+  }
+
+  const timeMatches = [];
+  const timeRegex = /((?:上午|中午|下午|晚上)?)(\d{1,2})\s*(?:点|:|：)\s*(\d{1,2})?\s*(?:分|半)?/g;
+  let match;
+  while ((match = timeRegex.exec(raw)) !== null) {
+    const period = match[1] || '';
+    let hour = parseInt(match[2], 10);
+    let minute = 0;
+    if (match[0].includes('半')) minute = 30;
+    else if (match[3] != null && match[3] !== '') minute = parseInt(match[3], 10);
+    if ((period === '下午' || period === '晚上') && hour < 12) hour += 12;
+    if (period === '中午' && hour < 11) hour += 12;
+    if (hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
+      timeMatches.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+    }
+  }
+  if (timeMatches[0]) result.start = timeMatches[0];
+  if (timeMatches[1]) result.end = timeMatches[1];
+
+  let article = raw;
+  article = article.replace(/今天|明天|昨天/g, ' ');
+  article = article.replace(/(?:上午|中午|下午|晚上)?\d{1,2}\s*(?:点|:|：)\s*(?:\d{1,2})?\s*(?:分|半)?/g, ' ');
+  article = article.replace(/到|开始|结束|从|学习|训练|活动|事项|补录|记录|语音|计时/g, ' ');
+  for (const option of getContentTypeOptions()) article = article.replaceAll(option, ' ');
+  article = article.replace(/\s+/g, ' ').trim();
+  result.article = article;
+
+  return result;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1021,7 +1547,7 @@ function exportCSV() {
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `学习记录_${todayStr()}.csv`;
+  a.download = `活动记录_${todayStr()}.csv`;
   a.click();
   showToast(`已导出 ${sessions.length} 条记录`, 'success');
 }
@@ -1035,7 +1561,7 @@ const COL_MAP = {
   end_time:         ['end_time','endtime','end','结束时间','结束'],
   duration_minutes: ['duration_minutes','duration','minutes','时长','duration_min'],
   content_note:     ['content_note','note','content','内容','备注','contentNote'],
-  article_title:    ['article_title','title','article','文章','articleTitle'],
+  article_title:    ['article_title','title','article','文章','事项','项目','articleTitle'],
 };
 
 function normalizeHeader(h) { return h.toLowerCase().replace(/[\s_-]/g,''); }
@@ -1084,7 +1610,7 @@ function processCSVText(text, options = {}) {
     const cells = parseCSVLine(lines[i]).map(c => c.trim());
     const get = (f) => colMap[f] !== undefined ? (cells[colMap[f]] || '') : '';
 
-    const date       = get('date');
+    const date       = normalizeDateValue(get('date'));
     const start_time = get('start_time');
     const end_time   = get('end_time');
     const dur_raw    = get('duration_minutes');
@@ -1127,11 +1653,15 @@ function processCSVText(text, options = {}) {
       article_title: article,
       status: 'completed'
     });
+    ensureContentTypeExists(note);
+    rememberArticleTitle(article);
     existingIds.add(key);
     imported++;
   }
 
   saveSessions(existing);
+  refreshContentTypeUI();
+  refreshArticleTitleUI();
 
   if (allowRestoreActive && activeFound.length === 1) {
     const a = activeFound[0];
@@ -1195,34 +1725,76 @@ function changeYear(delta) {
   document.getElementById('stats-year-display').textContent = statsYear;
   renderStats();
 }
+function selectStatsCategory(category) {
+  statsCategoryFilter = statsCategoryFilter === category ? '' : category;
+  const select = document.getElementById('stats-category-filter');
+  if (select) select.value = statsCategoryFilter;
+  renderStats();
+}
 
 function renderStats() {
   const yr = statsYear;
-  const sessions = getSessions().filter(s => s.status === 'completed');
-  const yearSessions = sessions.filter(s => s.date.startsWith(String(yr)));
+  const allSessions = getSessions()
+    .filter(s => s.status === 'completed')
+    .map(s => ({
+      ...s,
+      date: normalizeDateValue(s.date),
+      content_note: normalizeCategoryValue(s.content_note)
+    }));
+  const filteredSessions = statsCategoryFilter
+    ? allSessions.filter(s => s.content_note === statsCategoryFilter)
+    : allSessions;
+  const yearSessions = filteredSessions.filter(s => s.date.startsWith(String(yr)));
 
   // Daily summary map
   const dayMap = {};
-  sessions.forEach(s => {
+  filteredSessions.forEach(s => {
     if (!s.date) return;
     if (!dayMap[s.date]) dayMap[s.date] = { count: 0, minutes: 0 };
     dayMap[s.date].count++;
     dayMap[s.date].minutes += Math.floor(parseFloat(s.duration_minutes) || 0);
   });
 
+  const summaryMap = {};
+  allSessions
+    .filter(s => s.date.startsWith(String(yr)))
+    .forEach(s => {
+      const key = s.content_note || '未分类';
+      if (!summaryMap[key]) summaryMap[key] = { minutes: 0, count: 0 };
+      summaryMap[key].minutes += Math.floor(parseFloat(s.duration_minutes) || 0);
+      summaryMap[key].count++;
+    });
+  const summaryEntries = Object.entries(summaryMap).sort((a, b) => b[1].minutes - a[1].minutes);
+  const summaryEl = document.getElementById('stats-summary');
+  if (!summaryEntries.length) {
+    summaryEl.innerHTML = '<div class="summary-item empty"><div class="summary-item-name">暂无分类数据</div><div class="summary-item-meta">先记录活动后，这里会显示全年分类汇总。</div></div>';
+  } else {
+    const categoryCards = summaryEntries.map(([name, info]) => `
+      <div class="summary-item ${statsCategoryFilter === name ? 'active' : ''}" onclick="selectStatsCategory('${escapeHtml(name)}')">
+        <div class="summary-item-head">
+          <div class="summary-item-name">${escapeHtml(name)}</div>
+          <div class="summary-item-time">${Math.floor(info.minutes / 60)}h ${info.minutes % 60}m</div>
+        </div>
+        <div class="summary-item-meta">${info.count} 次记录</div>
+      </div>
+    `).join('');
+    summaryEl.innerHTML = categoryCards;
+  }
+
   // Summary cards
   const totalMins = yearSessions.reduce((a,s) => a + (Math.floor(parseFloat(s.duration_minutes)||0)), 0);
   const learnDays = [...new Set(yearSessions.map(s=>s.date).filter(d => (dayMap[d]||{}).minutes > 0))].length;
   const avgMins   = learnDays ? Math.floor(totalMins / learnDays) : 0;
-  const streak    = calcStreak();
+  const streak    = calcStreakFromSessions(filteredSessions);
+  const titleSuffix = statsCategoryFilter ? ` · ${statsCategoryFilter}` : '';
 
   document.getElementById('stats-cards').innerHTML = `
     <div class="stat-card">
-      <div class="stat-card-label">全年总时长</div>
+      <div class="stat-card-label">全年总时长${titleSuffix}</div>
       <div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div>
     </div>
     <div class="stat-card">
-      <div class="stat-card-label">学习天数</div>
+      <div class="stat-card-label">活跃天数</div>
       <div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div>
     </div>
     <div class="stat-card">
@@ -1235,29 +1807,16 @@ function renderStats() {
     </div>
   `;
 
+  document.getElementById('heatmap-title').textContent = `${yr} 年活动热力图${titleSuffix}`;
   renderHeatmap(yr, dayMap);
   renderDailyBar(dayMap);
   renderMonthlyBar(yr, dayMap);
 }
 
 function renderHeatmap(yr, dayMap) {
-  // Build weeks grid: Mon-Sun columns
-  const jan1 = new Date(yr, 0, 1);
-  // Start from Monday of the week containing Jan 1
-  const startDow = (jan1.getDay() + 6) % 7; // 0=Mon
-  const start = new Date(jan1); start.setDate(1 - startDow);
-
-  const dec31 = new Date(yr, 11, 31);
-  const endDow = (dec31.getDay() + 6) % 7;
-  const end = new Date(dec31); end.setDate(dec31.getDate() + (6 - endDow));
-
-  const today = new Date(); today.setHours(23,59,59,999);
-  const todayDate = localDateStr(new Date());
-
-  // Max minutes for scaling
-  const allMins = Object.values(dayMap).map(d=>d.minutes).filter(m=>m>0);
-  const maxMin = allMins.length ? Math.max(...allMins) : 120;
-
+  const today = new Date();
+  const isCurrentYear = yr === today.getFullYear();
+  const todayDate = localDateStr(today);
   function heatLevel(mins) {
     if (!mins) return 0;
     if (mins < 30) return 1;
@@ -1266,79 +1825,51 @@ function renderHeatmap(yr, dayMap) {
     return 4;
   }
 
-  // Build columns (each column = 1 week)
-  const cols = [];
-  let cur = new Date(start);
-  while (cur <= end) {
-    const col = [];
-    for (let d = 0; d < 7; d++) {
-      const ds = localDateStr(cur);
-      const isFuture = cur > today;
-      const isOtherYear = cur.getFullYear() !== yr;
-      const mins = (dayMap[ds]||{}).minutes || 0;
-      col.push({ ds, mins, isFuture, isOtherYear });
-      cur.setDate(cur.getDate()+1);
-    }
-    cols.push(col);
-  }
-
-  // Month label positions
-  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const monthCols = {}; // month -> first col idx
-  cols.forEach((col, ci) => {
-    col.forEach(cell => {
-      if (cell.isOtherYear || cell.isFuture) return;
-      const m = parseInt(cell.ds.slice(5,7)) - 1;
-      if (monthCols[m] === undefined) monthCols[m] = ci;
-    });
-  });
-
-  // Render heatmap
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   const hm = document.getElementById('heatmap');
-  hm.innerHTML = cols.map(col =>
-    `<div class="heatmap-col">${col.map(cell => {
-      if (cell.isOtherYear) return '<div class="heatmap-cell" data-future="1"></div>';
-      const lvl = cell.isFuture ? 0 : heatLevel(cell.mins);
-      const tip = cell.isFuture ? '' :
-        cell.mins ? `${cell.ds}: ${fmtMinutes(cell.mins)}` : cell.ds + ': 未学习';
-      const isToday = cell.ds === todayDate ? 'outline:2px solid var(--accent);outline-offset:1px;' : '';
-      return `<div class="heatmap-cell" data-lvl="${lvl}" data-tip="${escapeHtml(tip)}" style="${isToday}" title="${escapeHtml(tip)}"></div>`;
-    }).join('')}</div>`
-  ).join('');
-
-  // Month labels above heatmap
-  const labelEl = document.getElementById('heatmap-month-labels');
-  const cellW = 16; // 13px + 3px gap
-  labelEl.innerHTML = '';
-  Object.entries(monthCols).sort((a,b)=>a[0]-b[0]).forEach(([m, ci]) => {
-    const span = document.createElement('span');
-    span.textContent = monthNames[m];
-    span.style.cssText = `position:absolute;left:${ci*cellW}px;font-size:10px;color:var(--muted);`;
-    labelEl.appendChild(span);
-  });
-  labelEl.style.cssText = 'position:relative;height:14px;';
+  hm.innerHTML = monthNames.map((name, monthIndex) => {
+    const daysInMonth = new Date(yr, monthIndex + 1, 0).getDate();
+    const cells = [];
+    for (let day = 1; day <= 31; day++) {
+      if (day > daysInMonth) {
+        cells.push('<div class="heatmap-cell" data-future="1"></div>');
+        continue;
+      }
+      const ds = `${yr}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isFuture = isCurrentYear && ds > todayDate;
+      const mins = (dayMap[ds] || {}).minutes || 0;
+      const lvl = isFuture ? 0 : heatLevel(mins);
+      const tip = isFuture ? `${ds}: 未到该日期` : (mins ? `${ds}: ${fmtHours(mins)}` : `${ds}: 无记录`);
+      const isToday = ds === todayDate ? 'outline:2px solid var(--accent);outline-offset:1px;' : '';
+      cells.push(`<div class="heatmap-cell" data-lvl="${lvl}" data-tip="${escapeHtml(tip)}" style="${isToday}" title="${escapeHtml(tip)}"></div>`);
+    }
+    return `<div class="heatmap-row"><div class="heatmap-month-tag">${name}</div><div class="heatmap-days">${cells.join('')}</div></div>`;
+  }).join('');
 }
 
 function renderDailyBar(dayMap) {
-  // Last 30 days
+  const today = new Date();
+  const month = statsYear === today.getFullYear() ? today.getMonth() : today.getMonth();
+  const daysInMonth = new Date(statsYear, month + 1, 0).getDate();
   const days = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    days.push(localDateStr(d));
+  for (let day = 1; day <= daysInMonth; day++) {
+    days.push(`${statsYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
   }
-  const vals = days.map(d => (dayMap[d]||{}).minutes || 0);
+  const vals = days.map(d => (dayMap[d] || {}).minutes || 0);
   const maxV = Math.max(...vals, 1);
+  document.getElementById('daily-chart-title').textContent = `${statsYear}年${month + 1}月每日时长（小时）${statsCategoryFilter ? ` · ${statsCategoryFilter}` : ''}`;
 
   const chart = document.getElementById('bar-chart-daily');
   chart.innerHTML = vals.map((v, i) => {
     const pct = (v / maxV) * 100;
-    const label = days[i].slice(5); // MM-DD
-    const showLabel = (i % 5 === 0) || i === vals.length - 1;
+    const label = String(i + 1);
+    const showLabel = (i === 0) || ((i + 1) % 5 === 0) || i === vals.length - 1;
     return `<div class="bar-group" style="min-width:0;">
-      <div class="bar-fill" style="height:${Math.max(pct,2)}%;" title="${days[i]}: ${v}分钟"></div>
+      <div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct, v > 0 ? 2 : 0)}%;" title="${days[i]}: ${fmtHours(v)}" onclick="showBarDetail('daily', this)"></div>
       <div class="bar-label">${showLabel ? label : ''}</div>
     </div>`;
   }).join('');
+  document.getElementById('daily-chart-detail').textContent = '点击柱子查看具体数值';
 }
 
 function renderMonthlyBar(yr, dayMap) {
@@ -1350,16 +1881,25 @@ function renderMonthlyBar(yr, dayMap) {
       .reduce((a,[,v]) => a + v.minutes, 0);
   });
   const maxV = Math.max(...vals, 1);
-  document.getElementById('monthly-chart-title').textContent = `${yr} 各月学习时长（分钟）`;
+  const suffix = statsCategoryFilter ? ` · ${statsCategoryFilter}` : '';
+  document.getElementById('monthly-chart-title').textContent = `${yr} 各月累计时长（小时）${suffix}`;
 
   const chart = document.getElementById('bar-chart-monthly');
   chart.innerHTML = vals.map((v, i) => {
     const pct = (v / maxV) * 100;
     return `<div class="bar-group" style="min-width:0;">
-      <div class="bar-fill" style="height:${Math.max(pct, v>0?2:0)}%;" title="${months[i]}: ${fmtMinutes(v)}"></div>
+      <div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct, v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)}" onclick="showBarDetail('monthly', this)"></div>
       <div class="bar-label">${months[i]}</div>
     </div>`;
   }).join('');
+  document.getElementById('monthly-chart-detail').textContent = '点击柱子查看具体数值';
+}
+
+function showBarDetail(type, element) {
+  document.querySelectorAll(`.bar-fill[data-chart="${type}"]`).forEach(el => el.classList.remove('active'));
+  element.classList.add('active');
+  const detailId = type === 'daily' ? 'daily-chart-detail' : 'monthly-chart-detail';
+  document.getElementById(detailId).textContent = `${element.dataset.label}：${element.dataset.value}`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1397,6 +1937,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // Log filter listeners
 document.getElementById('filter-date').addEventListener('change', renderLog);
 document.getElementById('filter-note').addEventListener('change', renderLog);
+document.getElementById('stats-category-filter').addEventListener('change', function() {
+  statsCategoryFilter = this.value;
+  renderStats();
+});
 
 // content_note select listeners (Today tab)
 document.getElementById('content-note-sel').addEventListener('change', function() {
@@ -1421,11 +1965,17 @@ document.getElementById('m-date').addEventListener('change', updateDurationPrevi
 document.getElementById('add-modal').addEventListener('click', function(e) {
   if (e.target === this) closeAddModal();
 });
+document.getElementById('content-type-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeContentTypeManager();
+});
 
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
 function init() {
+  hydratePreferencesFromSessions();
+  refreshContentTypeUI();
+  refreshArticleTitleUI();
   initStatsYear();
   updateTimerUI();
   renderAll();
