@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学习计时</title>
+<style>
+  :root {
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --border: #DDE3EA;
+    --border-light: #EEF1F5;
+    --ink: #1A2733;
+    --ink-2: #3D5060;
+    --muted: #7A90A0;
+    --accent: #3A6EA8;
+    --accent-soft: #EAF0F8;
+    --accent-mid: #C5D8EE;
+    --green: #2E7D52;
+    --green-soft: #E8F5EE;
+    --red: #C0392B;
+    --red-soft: #FDECEA;
+    --amber: #7A5C1A;
+    --amber-soft: #FDF5E4;
+    --heat-0: #EAECEE;
+    --heat-1: #C5D8EE;
+    --heat-2: #7FA8C4;
+    --heat-3: #3A6EA8;
+    --heat-4: #1B3F66;
+    --radius: 8px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 2px 12px rgba(0,0,0,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    padding: 0 24px;
+  }
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+  }
+  .app-title { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
+
+  .tabs { display: flex; gap: 0; }
+  .tab-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 0 16px; height: 52px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover { color: var(--ink-2); }
+
+  .app-body { max-width: 900px; margin: 0 auto; padding: 24px 24px 60px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .card-body { padding: 20px 24px; }
+  .card + .card { margin-top: 16px; }
+
+  /* ── Today Stats Bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .stat-cell {
+    background: var(--surface);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stat-unit { font-size: 13px; font-weight: 400; color: var(--ink-2); margin-left: 2px; }
+
+  /* ── Timer Panel ── */
+  .timer-panel { padding: 24px; }
+  .timer-status {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px;
+  }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .status-dot.active { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--green-soft); }
+    50% { box-shadow: 0 0 0 6px rgba(46,125,82,0.1); }
+  }
+  .status-text { font-size: 13px; color: var(--muted); }
+  .timer-display {
+    font-size: 44px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+    margin-bottom: 20px; line-height: 1;
+  }
+  .timer-display.active { color: var(--accent); }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .field-input, .field-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--bg);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+    font-family: inherit;
+  }
+  .field-input:focus, .field-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    background: var(--surface);
+  }
+
+  .btn-row { display: flex; gap: 12px; }
+  .btn {
+    flex: 1; padding: 12px 20px;
+    border: none; border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-start {
+    background: var(--accent); color: #fff;
+  }
+  .btn-start:hover { background: #2d5a8a; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-end {
+    background: var(--red-soft); color: var(--red);
+    border: 1px solid #f5c6c2;
+  }
+  .btn-end:hover { background: #fad4d0; }
+  .btn-secondary {
+    background: var(--bg); color: var(--ink-2);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border-light); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* ── Recent Records ── */
+  .section-title {
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+  .record-list { display: flex; flex-direction: column; gap: 8px; }
+  .record-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    font-size: 13px;
+  }
+  .record-time { color: var(--muted); min-width: 120px; font-variant-numeric: tabular-nums; }
+  .record-duration { font-weight: 600; min-width: 54px; }
+  .record-note {
+    flex: 1; color: var(--ink-2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .record-article { color: var(--muted); font-size: 12px; }
+  .badge {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 500;
+  }
+  .badge-note {
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .badge-active {
+    background: var(--green-soft); color: var(--green);
+  }
+
+  /* ── Log Tab ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .toolbar input, .toolbar select {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface);
+    outline: none;
+    font-family: inherit;
+  }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; padding: 8px 10px;
+    color: var(--muted); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border-light); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
+  .td-muted { color: var(--muted); }
+  .td-mono { font-variant-numeric: tabular-nums; }
+  .btn-del {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); padding: 4px 6px; border-radius: 4px;
+    font-size: 12px; transition: all 0.15s;
+  }
+  .btn-del:hover { background: var(--red-soft); color: var(--red); }
+
+  /* ── Add Record Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 10px;
+    width: 100%; max-width: 480px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 18px; line-height: 1;
+    padding: 4px; border-radius: 4px;
+  }
+  .modal-close:hover { color: var(--ink); }
+  .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── Stats Tab ── */
+  .stats-cards {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .stat-card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .stat-card-value { font-size: 22px; font-weight: 700; color: var(--ink); }
+  .stat-card-unit { font-size: 13px; font-weight: 400; color: var(--muted); }
+
+  .chart-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 20px 24px; margin-bottom: 16px;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 16px; }
+
+  /* Heatmap */
+  .heatmap-scroll { overflow-x: auto; }
+  .heatmap { display: flex; gap: 3px; }
+  .heatmap-col { display: flex; flex-direction: column; gap: 3px; }
+  .heatmap-cell {
+    width: 13px; height: 13px; border-radius: 2px;
+    background: var(--heat-0);
+    cursor: default;
+    position: relative;
+  }
+  .heatmap-cell[data-lvl="1"] { background: var(--heat-1); }
+  .heatmap-cell[data-lvl="2"] { background: var(--heat-2); }
+  .heatmap-cell[data-lvl="3"] { background: var(--heat-3); }
+  .heatmap-cell[data-lvl="4"] { background: var(--heat-4); }
+  .heatmap-cell[data-future="1"] { background: transparent; }
+  .heatmap-month-labels {
+    display: flex; gap: 3px; margin-bottom: 4px;
+    font-size: 10px; color: var(--muted);
+  }
+  .heatmap-legend {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--muted);
+    margin-top: 8px; justify-content: flex-end;
+  }
+  .legend-cell { width: 12px; height: 12px; border-radius: 2px; }
+
+  /* Bar chart */
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .bar-fill {
+    width: 100%; border-radius: 3px 3px 0 0;
+    background: var(--accent-mid);
+    min-height: 2px;
+    transition: background 0.2s;
+    position: relative;
+  }
+  .bar-fill:hover { background: var(--accent); }
+  .bar-label { font-size: 9px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+
+  /* ── Toast ── */
+  .toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--ink); color: #fff;
+    padding: 10px 16px; border-radius: 6px;
+    font-size: 13px; box-shadow: var(--shadow-md);
+    animation: slideIn 0.2s ease;
+    max-width: 320px;
+  }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+  .toast.warning { background: #8a6d0b; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* ── Tooltip ── */
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff;
+    padding: 4px 8px; border-radius: 4px;
+    font-size: 11px; white-space: nowrap; z-index: 99;
+    pointer-events: none;
+  }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+  .divider { height: 1px; background: var(--border-light); margin: 20px 0; }
+
+  /* ── Year selector ── */
+  .year-sel-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+  .year-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px;
+    cursor: pointer; font-size: 13px; color: var(--ink);
+    transition: all 0.15s;
+  }
+  .year-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .year-display { font-size: 15px; font-weight: 600; min-width: 54px; text-align: center; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .stats-cards { grid-template-columns: repeat(2, 1fr); }
+    .field-row { grid-template-columns: 1fr; }
+    .modal-row { grid-template-columns: 1fr; }
+    .bar-label { font-size: 8px; }
+    .app-body { padding: 16px 14px 60px; }
+    .timer-display { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <span class="app-title">学习计时</span>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="today">今日</button>
+      <button class="tab-btn" data-tab="log">记录</button>
+      <button class="tab-btn" data-tab="stats">统计</button>
+    </nav>
+  </div>
+</header>
+
+<main class="app-body">
+
+  <!-- ══ TODAY ══ -->
+  <div class="tab-panel active" id="tab-today">
+    <div id="today-date-row" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
+
+    <div class="card" id="import-helper-card" style="display:none;margin-bottom:16px;">
+      <div class="card-body">
+        <div class="section-title">首次导入</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+          如果同目录里已经有 <code>会话记录.csv</code>，可以先尝试一键导入。若浏览器限制本地读取，再使用“记录”页里的手动导入。
+        </div>
+        <button class="btn btn-secondary" style="flex:0;padding:9px 16px;" onclick="importBundledCSV()">从同目录会话记录.csv 导入</button>
+      </div>
+    </div>
+
+    <div class="stats-bar" style="margin-bottom:16px;">
+      <div class="stat-cell">
+        <div class="stat-label">今日累计</div>
+        <div class="stat-value" id="today-total">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">今日次数</div>
+        <div class="stat-value" id="today-count">—<span class="stat-unit">次</span></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">连续学习</div>
+        <div class="stat-value" id="today-streak">—<span class="stat-unit">天</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="timer-panel">
+        <div class="timer-status">
+          <div class="status-dot" id="status-dot"></div>
+          <span class="status-text" id="status-text">未开始</span>
+        </div>
+        <div class="timer-display" id="timer-display">00:00:00</div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">内容类型</label>
+            <select class="field-select" id="content-note-sel">
+              <option value="">请选择或输入</option>
+              <option value="影子跟读">影子跟读</option>
+              <option value="文章串联">文章串联</option>
+              <option value="背诵全文">背诵全文</option>
+              <option value="知识沉淀">知识沉淀</option>
+              <option value="逐句解析">逐句解析</option>
+              <option value="__custom__">自定义…</option>
+            </select>
+            <input class="field-input" id="content-note-input" placeholder="输入内容类型" style="display:none;margin-top:6px;">
+          </div>
+          <div class="field-group">
+            <label class="field-label">文章标题</label>
+            <input class="field-input" id="article-title-input" placeholder="例：Training AI">
+          </div>
+        </div>
+
+        <div class="btn-row" id="btn-row">
+          <button class="btn btn-start" id="btn-start" onclick="startSession()">▶ 开始学习</button>
+          <button class="btn btn-end" id="btn-end" style="display:none;" onclick="endSession()">■ 结束学习</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="section-title">最近记录</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+          数据保存在当前浏览器本地。关闭页面后通常仍会保留，但建议定期导出 CSV 备份。
+        </div>
+        <div class="record-list" id="recent-list">
+          <div class="empty">暂无记录</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LOG ══ -->
+  <div class="tab-panel" id="tab-log">
+    <div class="toolbar">
+      <input type="date" id="filter-date" placeholder="筛选日期">
+      <select id="filter-note" style="min-width:120px;">
+        <option value="">全部类型</option>
+        <option value="影子跟读">影子跟读</option>
+        <option value="文章串联">文章串联</option>
+        <option value="背诵全文">背诵全文</option>
+        <option value="知识沉淀">知识沉淀</option>
+        <option value="逐句解析">逐句解析</option>
+      </select>
+      <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openAddModal()">＋ 手动补录</button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="exportCSV()">↓ 导出 CSV</button>
+        <label class="btn btn-secondary" style="flex:0;padding:7px 14px;cursor:pointer;">
+          ↑ 导入 CSV
+          <input type="file" accept=".csv" style="display:none;" onchange="importCSV(event)">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body" style="padding:0;">
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>开始</th>
+              <th>结束</th>
+              <th>时长</th>
+              <th>内容</th>
+              <th>文章</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="log-tbody">
+            <tr><td colspan="7" class="empty">暂无记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STATS ══ -->
+  <div class="tab-panel" id="tab-stats">
+    <div class="year-sel-row">
+      <button class="year-btn" onclick="changeYear(-1)">‹</button>
+      <span class="year-display" id="stats-year-display">2026</span>
+      <button class="year-btn" onclick="changeYear(1)">›</button>
+    </div>
+
+    <div class="stats-cards" id="stats-cards"></div>
+
+    <div class="chart-wrap">
+      <div class="chart-title" id="heatmap-title">全年学习热力图</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+        <span id="heatmap-month-labels" style="display:flex;gap:0;"></span>
+      </div>
+      <div class="heatmap-scroll">
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+      <div class="heatmap-legend">
+        少
+        <div class="legend-cell" style="background:var(--heat-0)"></div>
+        <div class="legend-cell" style="background:var(--heat-1)"></div>
+        <div class="legend-cell" style="background:var(--heat-2)"></div>
+        <div class="legend-cell" style="background:var(--heat-3)"></div>
+        <div class="legend-cell" style="background:var(--heat-4)"></div>
+        多
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">近 30 天每日时长（分钟）</div>
+      <div class="bar-chart" id="bar-chart-daily"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title" id="monthly-chart-title">各月学习时长（小时）</div>
+      <div class="bar-chart" id="bar-chart-monthly"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">手动补录记录</span>
+      <button class="modal-close" onclick="closeAddModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">日期 *</label>
+        <input type="date" class="field-input" id="m-date">
+      </div>
+      <div class="modal-row">
+        <div class="field-group">
+          <label class="field-label">开始时间 *</label>
+          <input type="time" step="1" class="field-input" id="m-start">
+        </div>
+        <div class="field-group">
+          <label class="field-label">结束时间 *</label>
+          <input type="time" step="1" class="field-input" id="m-end">
+        </div>
+      </div>
+      <div class="modal-row">
+        <div class="field-group">
+          <label class="field-label">内容类型</label>
+          <select class="field-select" id="m-note-sel">
+            <option value="">请选择</option>
+            <option value="影子跟读">影子跟读</option>
+            <option value="文章串联">文章串联</option>
+            <option value="背诵全文">背诵全文</option>
+            <option value="知识沉淀">知识沉淀</option>
+            <option value="逐句解析">逐句解析</option>
+            <option value="__custom__">自定义…</option>
+          </select>
+          <input class="field-input" id="m-note-input" placeholder="输入内容类型" style="display:none;margin-top:6px;">
+        </div>
+        <div class="field-group">
+          <label class="field-label">文章标题</label>
+          <input type="text" class="field-input" id="m-article">
+        </div>
+      </div>
+      <div id="m-duration-preview" style="font-size:12px;color:var(--muted);"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeAddModal()">取消</button>
+      <button class="btn btn-start" style="flex:0;padding:9px 18px;" onclick="saveManualRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ════════════════════════════════════════════════════════
+const STORAGE_KEY = 'english_sessions';
+const ACTIVE_KEY  = 'english_active_session';
+
+const CONTENT_NOTE_OPTIONS = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
+
+let timerInterval = null;
+let statsYear = null; // set on init to latest data year
+
+// ════════════════════════════════════════════════════════
+// STORAGE HELPERS
+// ════════════════════════════════════════════════════════
+function getSessions() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveSessions(arr) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+}
+function getActive() {
+  try { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
+  catch { return null; }
+}
+function saveActive(obj) {
+  if (obj) localStorage.setItem(ACTIVE_KEY, JSON.stringify(obj));
+  else localStorage.removeItem(ACTIVE_KEY);
+}
+
+// ════════════════════════════════════════════════════════
+// DATE / TIME HELPERS  (all local time, matching CSV)
+// ════════════════════════════════════════════════════════
+function localDateStr(d = new Date()) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
+function localTimeStr(d = new Date()) {
+  return String(d.getHours()).padStart(2,'0') + ':' +
+    String(d.getMinutes()).padStart(2,'0') + ':' +
+    String(d.getSeconds()).padStart(2,'0');
+}
+function timeStrToDate(dateStr, timeStr) {
+  // dateStr: "2026-04-09", timeStr: "16:33:09"
+  return new Date(dateStr + 'T' + timeStr);
+}
+function diffMinutesFloor(start, end) {
+  // matches Python int(float(...)) = floor
+  return Math.floor((end - start) / 60000);
+}
+function fmtMinutes(m) {
+  if (!m && m !== 0) return '—';
+  const h = Math.floor(m / 60), mm = m % 60;
+  if (h > 0) return `${h}h ${mm}m`;
+  return `${mm}m`;
+}
+function fmtElapsed(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
+}
+function todayStr() { return localDateStr(); }
+function uid() {
+  if (crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'').slice(0,12);
+  return Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+}
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ════════════════════════════════════════════════════════
+// SESSIONS LOGIC
+// ════════════════════════════════════════════════════════
+function todaySessions() {
+  const t = todayStr();
+  return getSessions().filter(s => s.date === t && s.status === 'completed');
+}
+function todayMinutes() {
+  return todaySessions().reduce((a, s) => a + (parseInt(s.duration_minutes) || 0), 0);
+}
+
+function calcStreak() {
+  const sessions = getSessions().filter(s => s.status === 'completed' && s.duration_minutes > 0);
+  const days = [...new Set(sessions.map(s => s.date))].sort();
+  if (!days.length) return 0;
+  const today = todayStr();
+  let streak = 0, cur = today;
+  for (let i = days.length - 1; i >= 0; i--) {
+    if (days[i] === cur) {
+      streak++;
+      const d = new Date(cur); d.setDate(d.getDate() - 1);
+      cur = localDateStr(d);
+    } else if (days[i] < cur) {
+      if (streak === 0) { streak = 0; break; } // today not studied yet
+      break;
+    }
+  }
+  // If today not in days, check yesterday
+  if (streak === 0) {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+    const yd = localDateStr(yesterday);
+    let s2 = 0, c2 = yd;
+    for (let i = days.length - 1; i >= 0; i--) {
+      if (days[i] === c2) { s2++; const d = new Date(c2); d.setDate(d.getDate()-1); c2 = localDateStr(d); }
+      else if (days[i] < c2) break;
+    }
+    streak = s2;
+  }
+  return streak;
+}
+
+// ════════════════════════════════════════════════════════
+// ACTIVE SESSION
+// ════════════════════════════════════════════════════════
+function startSession() {
+  const existing = getActive();
+  if (existing) { showToast('当前已有进行中的学习会话，请先结束', 'error'); return; }
+
+  const note = getContentNote();
+  const article = document.getElementById('article-title-input').value.trim();
+  const now = new Date();
+  const session = {
+    id: uid(),
+    date: localDateStr(now),
+    start_time: localTimeStr(now),
+    end_time: '',
+    duration_minutes: '',
+    content_note: note,
+    article_title: article,
+    status: 'active'
+  };
+  saveActive(session);
+  showToast('学习开始！', 'success');
+  updateTimerUI();
+  startTick();
+}
+
+function endSession() {
+  const active = getActive();
+  if (!active) return;
+  const now = new Date();
+  const endTime = localTimeStr(now);
+  const startDt = timeStrToDate(active.date, active.start_time);
+  const dur = diffMinutesFloor(startDt, now);
+
+  if (dur < 0) { showToast('结束时间早于开始时间，请检查系统时间', 'error'); return; }
+
+  // Supplement note/article if user filled after starting
+  const note = getContentNote() || active.content_note;
+  const article = document.getElementById('article-title-input').value.trim() || active.article_title;
+
+  const completed = {
+    ...active,
+    end_time: endTime,
+    duration_minutes: dur,
+    content_note: note,
+    article_title: article,
+    status: 'completed'
+  };
+
+  const sessions = getSessions();
+  sessions.push(completed);
+  saveSessions(sessions);
+  saveActive(null);
+
+  clearInterval(timerInterval); timerInterval = null;
+  showToast(`学习结束，本次 ${fmtMinutes(dur)}`, 'success');
+  resetInputs();
+  updateTimerUI();
+  renderAll();
+}
+
+function getContentNote() {
+  const sel = document.getElementById('content-note-sel').value;
+  if (sel === '__custom__') return document.getElementById('content-note-input').value.trim();
+  return sel;
+}
+
+function resetInputs() {
+  document.getElementById('content-note-sel').value = '';
+  document.getElementById('content-note-input').value = '';
+  document.getElementById('content-note-input').style.display = 'none';
+  document.getElementById('article-title-input').value = '';
+}
+
+function startTick() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(tickTimer, 1000);
+  tickTimer();
+}
+
+function tickTimer() {
+  const active = getActive();
+  if (!active) { clearInterval(timerInterval); return; }
+  const startDt = timeStrToDate(active.date, active.start_time);
+  const elapsed = Date.now() - startDt.getTime();
+  const el = document.getElementById('timer-display');
+  el.textContent = fmtElapsed(Math.max(0, elapsed));
+}
+
+// ════════════════════════════════════════════════════════
+// UI UPDATE
+// ════════════════════════════════════════════════════════
+function updateTimerUI() {
+  const active = getActive();
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  const display = document.getElementById('timer-display');
+  const btnStart = document.getElementById('btn-start');
+  const btnEnd = document.getElementById('btn-end');
+
+  if (active) {
+    dot.classList.add('active');
+    text.textContent = '学习中';
+    display.classList.add('active');
+    btnStart.style.display = 'none';
+    btnEnd.style.display = '';
+    // Restore fields
+    const sel = document.getElementById('content-note-sel');
+    if (CONTENT_NOTE_OPTIONS.includes(active.content_note)) {
+      sel.value = active.content_note;
+    } else if (active.content_note) {
+      sel.value = '__custom__';
+      document.getElementById('content-note-input').value = active.content_note;
+      document.getElementById('content-note-input').style.display = '';
+    }
+    document.getElementById('article-title-input').value = active.article_title || '';
+    if (!timerInterval) startTick();
+  } else {
+    dot.classList.remove('active');
+    text.textContent = '未开始';
+    display.classList.remove('active');
+    display.textContent = '00:00:00';
+    btnStart.style.display = '';
+    btnEnd.style.display = 'none';
+  }
+}
+
+function renderToday() {
+  const t = todayStr();
+  // Date label
+  const d = new Date();
+  const weekdays = ['日','一','二','三','四','五','六'];
+  document.getElementById('today-date-row').textContent =
+    `${t}  周${weekdays[d.getDay()]}`;
+
+  const sessions = todaySessions();
+  const mins = sessions.reduce((a,s) => a + (parseInt(s.duration_minutes)||0), 0);
+  document.getElementById('today-total').innerHTML =
+    mins > 0 ? `${Math.floor(mins/60)}<span class="stat-unit">h</span>${mins%60}<span class="stat-unit">m</span>` : '0<span class="stat-unit">m</span>';
+  document.getElementById('today-count').innerHTML = `${sessions.length}<span class="stat-unit">次</span>`;
+  document.getElementById('today-streak').innerHTML = `${calcStreak()}<span class="stat-unit">天</span>`;
+
+  const importHelper = document.getElementById('import-helper-card');
+  const hasAnyData = getSessions().length > 0 || !!getActive();
+  importHelper.style.display = hasAnyData ? 'none' : '';
+
+  // Recent 3
+  const allDone = getSessions().filter(s => s.status === 'completed')
+    .sort((a,b) => (b.date+b.start_time).localeCompare(a.date+a.start_time));
+  const recent = allDone.slice(0, 3);
+  const el = document.getElementById('recent-list');
+  if (!recent.length) { el.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  el.innerHTML = recent.map(s => `
+    <div class="record-item">
+      <span class="record-time">${s.start_time.slice(0,5)} – ${s.end_time ? s.end_time.slice(0,5) : '—'}</span>
+      <span class="record-duration">${fmtMinutes(s.duration_minutes)}</span>
+      ${s.content_note ? `<span class="badge badge-note">${escapeHtml(s.content_note)}</span>` : ''}
+      <span class="record-note">${escapeHtml(s.article_title || '')}</span>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// LOG TAB
+// ════════════════════════════════════════════════════════
+function renderLog() {
+  let sessions = getSessions()
+    .filter(s => s.status === 'completed')
+    .sort((a,b) => (b.date+b.start_time).localeCompare(a.date+a.start_time));
+
+  const fDate = document.getElementById('filter-date').value;
+  const fNote = document.getElementById('filter-note').value;
+  if (fDate) sessions = sessions.filter(s => s.date === fDate);
+  if (fNote) sessions = sessions.filter(s => s.content_note === fNote);
+
+  const tbody = document.getElementById('log-tbody');
+  if (!sessions.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无记录</td></tr>';
+    return;
+  }
+  tbody.innerHTML = sessions.map(s => `
+    <tr>
+      <td class="td-muted td-mono">${escapeHtml(s.date)}</td>
+      <td class="td-mono">${escapeHtml(s.start_time)}</td>
+      <td class="td-mono">${escapeHtml(s.end_time || '—')}</td>
+      <td class="td-mono" style="font-weight:600;">${s.duration_minutes != null && s.duration_minutes !== '' ? escapeHtml(s.duration_minutes) + ' 分' : '—'}</td>
+      <td>${s.content_note ? `<span class="badge badge-note">${escapeHtml(s.content_note)}</span>` : '<span class="td-muted">—</span>'}</td>
+      <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title || '—')}</td>
+      <td><button class="btn-del" onclick="deleteRecord('${s.id}')" title="删除">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+function deleteRecord(id) {
+  if (!confirm('确认删除这条记录？')) return;
+  const sessions = getSessions().filter(s => s.id !== id);
+  saveSessions(sessions);
+  renderAll();
+  showToast('已删除', 'success');
+}
+
+// ════════════════════════════════════════════════════════
+// MANUAL ADD
+// ════════════════════════════════════════════════════════
+function openAddModal() {
+  const today = todayStr();
+  document.getElementById('m-date').value = today;
+  document.getElementById('m-start').value = '';
+  document.getElementById('m-end').value = '';
+  document.getElementById('m-note-sel').value = '';
+  document.getElementById('m-note-input').value = '';
+  document.getElementById('m-note-input').style.display = 'none';
+  document.getElementById('m-article').value = '';
+  document.getElementById('m-duration-preview').textContent = '';
+  document.getElementById('add-modal').classList.add('open');
+}
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+}
+function saveManualRecord() {
+  const date    = document.getElementById('m-date').value;
+  const start   = document.getElementById('m-start').value;
+  const end     = document.getElementById('m-end').value;
+  const noteSel = document.getElementById('m-note-sel').value;
+  const noteIn  = document.getElementById('m-note-input').value.trim();
+  const article = document.getElementById('m-article').value.trim();
+
+  if (!date || !start || !end) { showToast('日期、开始和结束时间为必填项', 'error'); return; }
+
+  // Format HH:MM to HH:MM:SS
+  const startFull = start.length === 5 ? start + ':00' : start;
+  const endFull   = end.length === 5 ? end + ':00' : end;
+
+  const startDt = timeStrToDate(date, startFull);
+  const endDt   = timeStrToDate(date, endFull);
+  let dur = diffMinutesFloor(startDt, endDt);
+  if (dur < 0) { showToast('结束时间不能早于开始时间', 'error'); return; }
+
+  const note = (noteSel === '__custom__') ? noteIn : noteSel;
+
+  const record = {
+    id: uid(), date, start_time: startFull, end_time: endFull,
+    duration_minutes: dur, content_note: note, article_title: article, status: 'completed'
+  };
+  const sessions = getSessions();
+  sessions.push(record);
+  saveSessions(sessions);
+  closeAddModal();
+  renderAll();
+  showToast('补录成功', 'success');
+}
+
+// Duration preview in modal
+function updateDurationPreview() {
+  const date  = document.getElementById('m-date').value;
+  const start = document.getElementById('m-start').value;
+  const end   = document.getElementById('m-end').value;
+  const el    = document.getElementById('m-duration-preview');
+  if (!date || !start || !end) { el.textContent = ''; return; }
+  const s = timeStrToDate(date, start+':00');
+  const e = timeStrToDate(date, end+':00');
+  const d = diffMinutesFloor(s, e);
+  el.textContent = d >= 0 ? `预计时长：${d} 分钟` : '⚠ 结束时间早于开始时间';
+}
+
+// ════════════════════════════════════════════════════════
+// CSV EXPORT
+// ════════════════════════════════════════════════════════
+function exportCSV() {
+  const sessions = getSessions()
+    .filter(s => s.status === 'completed')
+    .sort((a,b) => (a.date+a.start_time).localeCompare(b.date+b.start_time));
+
+  const header = ['date','start_time','end_time','duration_minutes','content_note','article_title'];
+  const rows = sessions.map(s => [
+    s.date, s.start_time, s.end_time, s.duration_minutes, s.content_note, s.article_title
+  ].map(v => v == null ? '' : String(v)));
+
+  const csv = [header, ...rows].map(r =>
+    r.map(c => (c.includes(',') || c.includes('"') || c.includes('\n')) ? `"${c.replace(/"/g,'""')}"` : c).join(',')
+  ).join('\r\n');
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `学习记录_${todayStr()}.csv`;
+  a.click();
+  showToast(`已导出 ${sessions.length} 条记录`, 'success');
+}
+
+// ════════════════════════════════════════════════════════
+// CSV IMPORT  (with column alias mapping)
+// ════════════════════════════════════════════════════════
+const COL_MAP = {
+  date:             ['date','日期','Date'],
+  start_time:       ['start_time','starttime','start','开始时间','开始'],
+  end_time:         ['end_time','endtime','end','结束时间','结束'],
+  duration_minutes: ['duration_minutes','duration','minutes','时长','duration_min'],
+  content_note:     ['content_note','note','content','内容','备注','contentNote'],
+  article_title:    ['article_title','title','article','文章','articleTitle'],
+};
+
+function normalizeHeader(h) { return h.toLowerCase().replace(/[\s_-]/g,''); }
+
+function mapHeaders(headers) {
+  const result = {};
+  headers.forEach((raw, idx) => {
+    const norm = normalizeHeader(raw);
+    for (const [field, aliases] of Object.entries(COL_MAP)) {
+      if (aliases.some(a => normalizeHeader(a) === norm)) { result[field] = idx; break; }
+    }
+  });
+  return result;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+function processCSVText(text, options = {}) {
+  const { allowRestoreActive = true } = options;
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { showToast('CSV 文件内容为空', 'error'); return false; }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.trim());
+  const colMap = mapHeaders(headers);
+  if (colMap.date === undefined) { showToast('未找到 date 列，请检查文件', 'error'); return false; }
+
+  const existing = getSessions();
+  const existingIds = new Set(existing.map(s => s.date + '|' + s.start_time));
+  let imported = 0, skipped = 0, activeFound = [], dupeFound = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCSVLine(lines[i]).map(c => c.trim());
+    const get = (f) => colMap[f] !== undefined ? (cells[colMap[f]] || '') : '';
+
+    const date       = get('date');
+    const start_time = get('start_time');
+    const end_time   = get('end_time');
+    const dur_raw    = get('duration_minutes');
+    const note       = get('content_note');
+    const article    = get('article_title');
+
+    if (!date || !start_time) { skipped++; continue; }
+
+    if (allowRestoreActive && start_time && !end_time) {
+      activeFound.push({
+        date,
+        start_time: start_time.length === 5 ? start_time + ':00' : start_time,
+        content_note: note,
+        article_title: article
+      });
+      continue;
+    }
+
+    const normalizedStart = start_time.length === 5 ? start_time + ':00' : start_time;
+    const normalizedEnd = end_time && end_time.length === 5 ? end_time + ':00' : end_time;
+
+    let dur = dur_raw !== '' ? Math.floor(parseFloat(dur_raw)) : null;
+    if ((dur === null || isNaN(dur)) && normalizedStart && normalizedEnd) {
+      const s = timeStrToDate(date, normalizedStart);
+      const e = timeStrToDate(date, normalizedEnd);
+      dur = diffMinutesFloor(s, e);
+      if (dur < 0) dur = 0;
+    }
+
+    const key = date + '|' + normalizedStart;
+    if (existingIds.has(key)) { dupeFound++; continue; }
+
+    existing.push({
+      id: uid(),
+      date,
+      start_time: normalizedStart,
+      end_time: normalizedEnd,
+      duration_minutes: dur !== null && !isNaN(dur) ? dur : '',
+      content_note: note,
+      article_title: article,
+      status: 'completed'
+    });
+    existingIds.add(key);
+    imported++;
+  }
+
+  saveSessions(existing);
+
+  if (allowRestoreActive && activeFound.length === 1) {
+    const a = activeFound[0];
+    const currentActive = getActive();
+    if (!currentActive) {
+      saveActive({ id: uid(), ...a, end_time: '', duration_minutes: '', status: 'active' });
+      showToast('发现未结束会话，已恢复为进行中状态', 'warning');
+    } else {
+      showToast('发现1条未结束记录，但当前已有活跃会话，已跳过', 'warning');
+    }
+  } else if (allowRestoreActive && activeFound.length > 1) {
+    showToast(`发现 ${activeFound.length} 条未结束记录，已全部跳过，请手动处理`, 'warning');
+  }
+
+  let msg = `导入完成：${imported} 条新记录`;
+  if (dupeFound) msg += `，${dupeFound} 条重复已跳过`;
+  if (skipped) msg += `，${skipped} 条无效行已跳过`;
+  showToast(msg, 'success');
+  renderAll();
+  initStatsYear();
+  return true;
+}
+
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    processCSVText(e.target.result);
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+async function importBundledCSV() {
+  try {
+    const res = await fetch('./会话记录.csv', { cache: 'no-store' });
+    if (!res.ok) throw new Error('fetch failed');
+    const text = await res.text();
+    processCSVText(text);
+  } catch (err) {
+    showToast('未能自动读取同目录会话记录.csv。若是本地双击打开，请改用“记录”页手动导入。', 'warning');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// STATS TAB
+// ════════════════════════════════════════════════════════
+function initStatsYear() {
+  const sessions = getSessions().filter(s => s.status === 'completed');
+  if (sessions.length) {
+    const latest = sessions.map(s => parseInt(s.date.slice(0,4))).filter(Boolean);
+    statsYear = Math.max(...latest);
+  } else {
+    statsYear = new Date().getFullYear();
+  }
+  document.getElementById('stats-year-display').textContent = statsYear;
+}
+function changeYear(delta) {
+  statsYear += delta;
+  document.getElementById('stats-year-display').textContent = statsYear;
+  renderStats();
+}
+
+function renderStats() {
+  const yr = statsYear;
+  const sessions = getSessions().filter(s => s.status === 'completed');
+  const yearSessions = sessions.filter(s => s.date.startsWith(String(yr)));
+
+  // Daily summary map
+  const dayMap = {};
+  sessions.forEach(s => {
+    if (!s.date) return;
+    if (!dayMap[s.date]) dayMap[s.date] = { count: 0, minutes: 0 };
+    dayMap[s.date].count++;
+    dayMap[s.date].minutes += Math.floor(parseFloat(s.duration_minutes) || 0);
+  });
+
+  // Summary cards
+  const totalMins = yearSessions.reduce((a,s) => a + (Math.floor(parseFloat(s.duration_minutes)||0)), 0);
+  const learnDays = [...new Set(yearSessions.map(s=>s.date).filter(d => (dayMap[d]||{}).minutes > 0))].length;
+  const avgMins   = learnDays ? Math.floor(totalMins / learnDays) : 0;
+  const streak    = calcStreak();
+
+  document.getElementById('stats-cards').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-label">全年总时长</div>
+      <div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">学习天数</div>
+      <div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">日均时长</div>
+      <div class="stat-card-value">${Math.floor(avgMins/60)}<span class="stat-card-unit">h ${avgMins%60}m</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">当前连续</div>
+      <div class="stat-card-value">${streak}<span class="stat-card-unit">天</span></div>
+    </div>
+  `;
+
+  renderHeatmap(yr, dayMap);
+  renderDailyBar(dayMap);
+  renderMonthlyBar(yr, dayMap);
+}
+
+function renderHeatmap(yr, dayMap) {
+  // Build weeks grid: Mon-Sun columns
+  const jan1 = new Date(yr, 0, 1);
+  // Start from Monday of the week containing Jan 1
+  const startDow = (jan1.getDay() + 6) % 7; // 0=Mon
+  const start = new Date(jan1); start.setDate(1 - startDow);
+
+  const dec31 = new Date(yr, 11, 31);
+  const endDow = (dec31.getDay() + 6) % 7;
+  const end = new Date(dec31); end.setDate(dec31.getDate() + (6 - endDow));
+
+  const today = new Date(); today.setHours(23,59,59,999);
+  const todayDate = localDateStr(new Date());
+
+  // Max minutes for scaling
+  const allMins = Object.values(dayMap).map(d=>d.minutes).filter(m=>m>0);
+  const maxMin = allMins.length ? Math.max(...allMins) : 120;
+
+  function heatLevel(mins) {
+    if (!mins) return 0;
+    if (mins < 30) return 1;
+    if (mins < 60) return 2;
+    if (mins < 120) return 3;
+    return 4;
+  }
+
+  // Build columns (each column = 1 week)
+  const cols = [];
+  let cur = new Date(start);
+  while (cur <= end) {
+    const col = [];
+    for (let d = 0; d < 7; d++) {
+      const ds = localDateStr(cur);
+      const isFuture = cur > today;
+      const isOtherYear = cur.getFullYear() !== yr;
+      const mins = (dayMap[ds]||{}).minutes || 0;
+      col.push({ ds, mins, isFuture, isOtherYear });
+      cur.setDate(cur.getDate()+1);
+    }
+    cols.push(col);
+  }
+
+  // Month label positions
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthCols = {}; // month -> first col idx
+  cols.forEach((col, ci) => {
+    col.forEach(cell => {
+      if (cell.isOtherYear || cell.isFuture) return;
+      const m = parseInt(cell.ds.slice(5,7)) - 1;
+      if (monthCols[m] === undefined) monthCols[m] = ci;
+    });
+  });
+
+  // Render heatmap
+  const hm = document.getElementById('heatmap');
+  hm.innerHTML = cols.map(col =>
+    `<div class="heatmap-col">${col.map(cell => {
+      if (cell.isOtherYear) return '<div class="heatmap-cell" data-future="1"></div>';
+      const lvl = cell.isFuture ? 0 : heatLevel(cell.mins);
+      const tip = cell.isFuture ? '' :
+        cell.mins ? `${cell.ds}: ${fmtMinutes(cell.mins)}` : cell.ds + ': 未学习';
+      const isToday = cell.ds === todayDate ? 'outline:2px solid var(--accent);outline-offset:1px;' : '';
+      return `<div class="heatmap-cell" data-lvl="${lvl}" data-tip="${escapeHtml(tip)}" style="${isToday}" title="${escapeHtml(tip)}"></div>`;
+    }).join('')}</div>`
+  ).join('');
+
+  // Month labels above heatmap
+  const labelEl = document.getElementById('heatmap-month-labels');
+  const cellW = 16; // 13px + 3px gap
+  labelEl.innerHTML = '';
+  Object.entries(monthCols).sort((a,b)=>a[0]-b[0]).forEach(([m, ci]) => {
+    const span = document.createElement('span');
+    span.textContent = monthNames[m];
+    span.style.cssText = `position:absolute;left:${ci*cellW}px;font-size:10px;color:var(--muted);`;
+    labelEl.appendChild(span);
+  });
+  labelEl.style.cssText = 'position:relative;height:14px;';
+}
+
+function renderDailyBar(dayMap) {
+  // Last 30 days
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(localDateStr(d));
+  }
+  const vals = days.map(d => (dayMap[d]||{}).minutes || 0);
+  const maxV = Math.max(...vals, 1);
+
+  const chart = document.getElementById('bar-chart-daily');
+  chart.innerHTML = vals.map((v, i) => {
+    const pct = (v / maxV) * 100;
+    const label = days[i].slice(5); // MM-DD
+    const showLabel = (i % 5 === 0) || i === vals.length - 1;
+    return `<div class="bar-group" style="min-width:0;">
+      <div class="bar-fill" style="height:${Math.max(pct,2)}%;" title="${days[i]}: ${v}分钟"></div>
+      <div class="bar-label">${showLabel ? label : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMonthlyBar(yr, dayMap) {
+  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const vals = months.map((_, m) => {
+    const prefix = `${yr}-${String(m+1).padStart(2,'0')}`;
+    return Object.entries(dayMap)
+      .filter(([d]) => d.startsWith(prefix))
+      .reduce((a,[,v]) => a + v.minutes, 0);
+  });
+  const maxV = Math.max(...vals, 1);
+  document.getElementById('monthly-chart-title').textContent = `${yr} 各月学习时长（分钟）`;
+
+  const chart = document.getElementById('bar-chart-monthly');
+  chart.innerHTML = vals.map((v, i) => {
+    const pct = (v / maxV) * 100;
+    return `<div class="bar-group" style="min-width:0;">
+      <div class="bar-fill" style="height:${Math.max(pct, v>0?2:0)}%;" title="${months[i]}: ${fmtMinutes(v)}"></div>
+      <div class="bar-label">${months[i]}</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+function showToast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ════════════════════════════════════════════════════════
+function renderAll() {
+  renderToday();
+  renderLog();
+  renderStats();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'log') renderLog();
+    if (btn.dataset.tab === 'stats') renderStats();
+  });
+});
+
+// Log filter listeners
+document.getElementById('filter-date').addEventListener('change', renderLog);
+document.getElementById('filter-note').addEventListener('change', renderLog);
+
+// content_note select listeners (Today tab)
+document.getElementById('content-note-sel').addEventListener('change', function() {
+  const inp = document.getElementById('content-note-input');
+  inp.style.display = this.value === '__custom__' ? '' : 'none';
+  if (this.value !== '__custom__') inp.value = '';
+});
+
+// content_note select listener (Modal)
+document.getElementById('m-note-sel').addEventListener('change', function() {
+  const inp = document.getElementById('m-note-input');
+  inp.style.display = this.value === '__custom__' ? '' : 'none';
+  if (this.value !== '__custom__') inp.value = '';
+});
+
+// Modal duration preview
+document.getElementById('m-start').addEventListener('change', updateDurationPreview);
+document.getElementById('m-end').addEventListener('change', updateDurationPreview);
+document.getElementById('m-date').addEventListener('change', updateDurationPreview);
+
+// Close modal on overlay click
+document.getElementById('add-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAddModal();
+});
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function init() {
+  initStatsYear();
+  updateTimerUI();
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
