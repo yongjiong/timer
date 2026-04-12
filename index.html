@@ -876,13 +876,15 @@ const CONTENT_TYPE_KEY = 'english_content_types';
 const ARTICLE_TITLES_KEY = 'english_article_titles';
 const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习','Period'];
 const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
+const STATS_FILTER_ALL = '';
+const STATS_FILTER_NO_PERIOD = '__exclude_period__';
 
 let timerInterval = null;
 let statsYear = null;
 let editingRecordId = null;
 let recognition = null;
 let recognitionActive = false;
-let statsCategoryFilter = '';
+let statsCategoryFilter = STATS_FILTER_ALL;
 const DAILY_CHART_MAX_MINUTES = 12 * 60;
 const MONTHLY_CHART_MAX_MINUTES = 150 * 60;
 
@@ -1012,8 +1014,9 @@ function refreshContentTypeUI(){
   ['pc-stats-category-filter','mob-stats-category-filter'].forEach(id=>{
     const el=$id(id);if(!el)return;
     const statOptions=getContentTypeOptions().filter(o=>!isRangeCategory(o));
-    const kv=statOptions.includes(statsCategoryFilter)?statsCategoryFilter:'';
-    el.innerHTML='<option value="">全部分类</option>'+statOptions.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    const isSpecialFilter=statsCategoryFilter===STATS_FILTER_ALL||statsCategoryFilter===STATS_FILTER_NO_PERIOD;
+    const kv=statOptions.includes(statsCategoryFilter)||isSpecialFilter?statsCategoryFilter:STATS_FILTER_ALL;
+    el.innerHTML=`<option value="${STATS_FILTER_ALL}">全部分类</option><option value="${STATS_FILTER_NO_PERIOD}">不含 Period</option>`+statOptions.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
     el.value=kv;statsCategoryFilter=kv;
   });
 }
@@ -1459,28 +1462,6 @@ function initStatsYear(){
 }
 function changeYear(d){statsYear+=d;[$id('pc-stats-year-display'),$id('mob-stats-year-display')].forEach(el=>{if(el)el.textContent=statsYear});renderStats()}
 
-function renderPeriodSummary(periodSessions,yr){
-  const pcWrap=$id('pc-period-summary'),mobWrap=$id('mob-period-summary');
-  if(!pcWrap&&!mobWrap)return;
-  if(!periodSessions.length){
-    [pcWrap,mobWrap].forEach(el=>{if(el)el.style.display='none'});
-    return;
-  }
-  const dayMap={};
-  periodSessions.forEach(s=>expandSessionToDayMinutes(s).forEach(entry=>addMinutesToDayMap(dayMap,entry.date,entry.minutes)));
-  const coveredDays=Object.keys(dayMap).length;
-  const latest=periodSessions.slice().sort((a,b)=>{
-    const av=(normalizeDateValue(a.end_date||a.date)+(a.range_end_time||'')).padEnd(19,'0');
-    const bv=(normalizeDateValue(b.end_date||b.date)+(b.range_end_time||'')).padEnd(19,'0');
-    return bv.localeCompare(av);
-  })[0];
-  const latestText=latest?formatRecordRange(latest):'—';
-  const note=`${yr} 年 Period 已单独展示，不混入小时统计主图。`;
-  const html=`<div class="period-summary-title">Period 汇总</div><div class="period-summary-grid"><div class="period-summary-card"><div class="period-summary-label">覆盖天数</div><div class="period-summary-value">${coveredDays} 天</div></div><div class="period-summary-card"><div class="period-summary-label">区间次数</div><div class="period-summary-value">${periodSessions.length} 次</div></div><div class="period-summary-card"><div class="period-summary-label">最近一次</div><div class="period-summary-value" style="font-size:14px;line-height:1.4;">${escapeHtml(latestText)}</div></div></div><div class="period-summary-note">${note}</div>`;
-  if(pcWrap){pcWrap.style.display='';pcWrap.innerHTML=html}
-  if(mobWrap){mobWrap.style.display='';mobWrap.innerHTML=html}
-}
-
 function renderStats(){
   const yr=statsYear;
   [$id('pc-stats-year-display'),$id('mob-stats-year-display')].forEach(el=>{if(el)el.textContent=yr});
@@ -1488,13 +1469,19 @@ function renderStats(){
   const yearSessions=sessions.filter(s=>s.date.startsWith(String(yr)));
   const periodSessions=yearSessions.filter(s=>isRangeRecord(s)||isRangeCategory(s.content_note));
   const timedYearSessions=yearSessions.filter(s=>!isRangeRecord(s)&&!isRangeCategory(s.content_note));
-  let filteredSessions=statsCategoryFilter?timedYearSessions.filter(s=>s.content_note===statsCategoryFilter):timedYearSessions;
+  const isAllFilter=statsCategoryFilter===STATS_FILTER_ALL;
+  const isNoPeriodFilter=statsCategoryFilter===STATS_FILTER_NO_PERIOD;
+  const isCategoryFilter=!isAllFilter&&!isNoPeriodFilter;
+  let filteredSessions=isCategoryFilter?timedYearSessions.filter(s=>s.content_note===statsCategoryFilter):timedYearSessions;
   const dayMap={};filteredSessions.forEach(s=>expandSessionToDayMinutes(s).forEach(entry=>addMinutesToDayMap(dayMap,entry.date,entry.minutes)));
+  const chartDayMap={...dayMap};
+  if(isAllFilter)periodSessions.forEach(s=>expandSessionToDayMinutes(s).forEach(entry=>addMinutesToDayMap(chartDayMap,entry.date,entry.minutes)));
   const totalMins=Object.values(dayMap).reduce((a,v)=>a+v.minutes,0);
   const learnDays=Object.keys(dayMap).filter(d=>(dayMap[d]||{}).minutes>0).length;
   const avgMins=learnDays?Math.floor(totalMins/learnDays):0;
   const streak=calcStreakFromSessions(filteredSessions);
-  const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
+  const sfx=isCategoryFilter?` · ${statsCategoryFilter}`:'';
+  const chartSfx=isCategoryFilter?sfx:(isAllFilter&&periodSessions.length?' · 全部分类（含 Period）':' · 全部分类（不含 Period）');
   // PC stats cards
   if($id('pc-stats-cards'))$id('pc-stats-cards').innerHTML=`<div class="stat-card"><div class="stat-card-label">全年总时长${sfx}</div><div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">活跃天数</div><div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div></div><div class="stat-card"><div class="stat-card-label">日均时长</div><div class="stat-card-value">${Math.floor(avgMins/60)}<span class="stat-card-unit">h ${avgMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">当前连续</div><div class="stat-card-value">${streak}<span class="stat-card-unit">天</span></div></div>`;
   // Mobile stats cards
@@ -1506,12 +1493,12 @@ function renderStats(){
   if($id('pc-stats-summary')){if(!catEntries.length)$id('pc-stats-summary').innerHTML='';else $id('pc-stats-summary').innerHTML=catEntries.map(([name,info])=>`<div class="summary-item ${statsCategoryFilter===name?'active':''}" onclick="selectStatsCategory('${escapeHtml(name)}')"><div class="summary-item-head"><div class="summary-item-name">${escapeHtml(name)}</div><div class="summary-item-time">${Math.floor(info.minutes/60)}h ${info.minutes%60}m</div></div><div class="summary-item-meta">${info.count} 次记录</div></div>`).join('')}
   // Category list (mobile)
   if($id('mob-cat-list')){if(!catEntries.length)$id('mob-cat-list').innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">暂无数据</div>';else $id('mob-cat-list').innerHTML=catEntries.map(([name,info])=>`<div class="mob-cat-item ${statsCategoryFilter===name?'active':''}" onclick="selectStatsCategory('${escapeHtml(name)}')"><div class="mob-cat-bar"><div class="mob-cat-name">${escapeHtml(name)}</div><div class="mob-cat-prog"><div class="mob-cat-prog-fill" style="width:${Math.round((info.minutes/maxCatMins)*100)}%"></div></div><div class="mob-cat-count">${info.count} 次</div></div><div class="mob-cat-time">${Math.floor(info.minutes/60)}h${info.minutes%60}m</div></div>`).join('')}
-  renderPeriodSummary(periodSessions,yr);
-  [$id('pc-heatmap-title'),$id('mob-heatmap-title')].forEach(el=>{if(el)el.textContent=`${yr} 年计时热力图${sfx}`});
-  renderHeatmap(yr,dayMap);renderDailyBar(dayMap);renderMonthlyBar(yr,dayMap);
+  [$id('pc-period-summary'),$id('mob-period-summary')].forEach(el=>{if(el){el.style.display='none';el.innerHTML='';}});
+  [$id('pc-heatmap-title'),$id('mob-heatmap-title')].forEach(el=>{if(el)el.textContent=`${yr} 年计时热力图${chartSfx}`});
+  renderHeatmap(yr,chartDayMap);renderDailyBar(chartDayMap,chartSfx);renderMonthlyBar(yr,chartDayMap,chartSfx);
 }
 function selectStatsCategory(name){
-  statsCategoryFilter=statsCategoryFilter===name?'':name;
+  statsCategoryFilter=statsCategoryFilter===name?STATS_FILTER_ALL:name;
   [$id('pc-stats-category-filter'),$id('mob-stats-category-filter')].forEach(el=>{if(el)el.value=statsCategoryFilter});
   renderStats();
 }
@@ -1526,21 +1513,20 @@ function renderHeatmap(yr,dayMap){
   const mHM=$id('mob-heatmap');
   if(mHM)mHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="mob-hm-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isFuture=isCurrentYear&&ds>todayDate;const mins=(dayMap[ds]||{}).minutes||0;const lvl=isFuture?0:heatLevel(mins);const isToday=ds===todayDate?'outline:1.5px solid var(--accent);outline-offset:1px;':'';cells.push(`<div class="mob-hm-cell" data-l="${lvl}" style="${isToday}" title="${ds}: ${mins?fmtHours(mins):'无记录'}"></div>`)}return`<div class="mob-hm-row"><div class="mob-hm-label">${name}</div><div class="mob-hm-days">${cells.join('')}</div></div>`}).join('');
 }
-function renderDailyBar(dayMap){
+function renderDailyBar(dayMap,titleSuffix=''){
   const today=new Date(),month=today.getMonth();const dim=new Date(statsYear,month+1,0).getDate();
   const days=[];for(let d=1;d<=dim;d++)days.push(`${statsYear}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
   const vals=days.map(d=>(dayMap[d]||{}).minutes||0),maxV=DAILY_CHART_MAX_MINUTES;
-  const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
-  [$id('pc-daily-chart-title'),$id('mob-daily-chart-title')].forEach(el=>{if(el)el.textContent=`${statsYear}年${month+1}月每日计时时长${sfx}（满格 12h）`});
+  [$id('pc-daily-chart-title'),$id('mob-daily-chart-title')].forEach(el=>{if(el)el.textContent=`${statsYear}年${month+1}月每日计时时长${titleSuffix}（满格 12h）`});
   const html=vals.map((v,i)=>{const safeV=Math.min(v,maxV);const pct=(safeV/maxV)*100;const showLabel=(i===0)||((i+1)%5===0)||i===vals.length-1;return`<div class="bar-group"><div class="bar-track"><div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${days[i]}: ${fmtHours(v)} / 12h" onclick="showBarDetail('daily',this)"></div></div><div class="bar-label">${showLabel?String(i+1):''}</div></div>`}).join('');
   [$id('pc-bar-chart-daily'),$id('mob-bar-chart-daily')].forEach(el=>{if(el)el.innerHTML=html});
   [$id('pc-daily-chart-detail'),$id('mob-daily-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值（按 12 小时固定刻度）'});
 }
-function renderMonthlyBar(yr,dayMap){
+function renderMonthlyBar(yr,dayMap,titleSuffix=''){
   const months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   const vals=months.map((_,m)=>{const p=`${yr}-${String(m+1).padStart(2,'0')}`;return Object.entries(dayMap).filter(([d])=>d.startsWith(p)).reduce((a,[,v])=>a+v.minutes,0)});
-  const maxV=MONTHLY_CHART_MAX_MINUTES;const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
-  [$id('pc-monthly-chart-title'),$id('mob-monthly-chart-title')].forEach(el=>{if(el)el.textContent=`${yr}年各月计时时长${sfx}（满格 150h）`});
+  const maxV=MONTHLY_CHART_MAX_MINUTES;
+  [$id('pc-monthly-chart-title'),$id('mob-monthly-chart-title')].forEach(el=>{if(el)el.textContent=`${yr}年各月计时时长${titleSuffix}（满格 150h）`});
   const html=vals.map((v,i)=>{const safeV=Math.min(v,maxV);const pct=(safeV/maxV)*100;return`<div class="bar-group"><div class="bar-track"><div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)} / 150h" onclick="showBarDetail('monthly',this)"></div></div><div class="bar-label">${months[i].replace('月','')}</div></div>`}).join('');
   [$id('pc-bar-chart-monthly'),$id('mob-bar-chart-monthly')].forEach(el=>{if(el)el.innerHTML=html});
   [$id('pc-monthly-chart-detail'),$id('mob-monthly-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值（按 150 小时固定刻度）'});
