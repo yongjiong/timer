@@ -581,7 +581,8 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
     <div class="modal-body">
       <div class="voice-status" id="pc-voice-status"></div>
       <button class="voice-btn-pc" id="pc-voice-btn" onclick="startVoiceFill()">🎤 <span id="pc-voice-btn-text">点击语音录入</span></button>
-      <div class="field-group"><label class="field-label">日期 *</label><input type="date" class="field-input" id="pc-m-date"></div>
+      <div class="field-group"><label class="field-label" id="pc-m-date-label">日期 *</label><input type="date" class="field-input" id="pc-m-date"></div>
+      <div class="field-group" id="pc-m-end-date-wrap" style="display:none;"><label class="field-label">结束日期 *</label><input type="date" class="field-input" id="pc-m-end-date"></div>
       <div class="modal-row">
         <div class="field-group"><label class="field-label">开始时间 *</label><input type="time" step="1" class="field-input" id="pc-m-start"></div>
         <div class="field-group"><label class="field-label">结束时间 *</label><input type="time" step="1" class="field-input" id="pc-m-end"></div>
@@ -658,7 +659,7 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
           <div class="mob-field-stack">
             <div class="mob-field-wrap">
               <div class="mob-field-lbl">活动分类</div>
-              <div class="mob-field-row">
+          <div class="mob-field-row">
                 <select class="field-select" id="mob-content-note-sel" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;"></select>
                 <button class="mob-edit-btn" onclick="openContentTypeManager()">编辑</button>
               </div>
@@ -762,7 +763,8 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
       <button class="mob-voice-btn" id="mob-voice-btn" onclick="startVoiceFill()">
         <span id="mob-voice-btn-icon">🎤</span><span id="mob-voice-btn-text">点击开始语音录入</span>
       </button>
-      <div class="mob-field-wrap"><div class="mob-field-lbl">日期 *</div><input type="date" class="field-input" id="mob-m-date" style="background:var(--surface2);"></div>
+      <div class="mob-field-wrap"><div class="mob-field-lbl" id="mob-m-date-label">日期 *</div><input type="date" class="field-input" id="mob-m-date" style="background:var(--surface2);"></div>
+      <div class="mob-field-wrap" id="mob-m-end-date-wrap" style="display:none;"><div class="mob-field-lbl">结束日期 *</div><input type="date" class="field-input" id="mob-m-end-date" style="background:var(--surface2);"></div>
       <div class="mob-sheet-row">
         <div class="mob-field-wrap"><div class="mob-field-lbl">开始时间 *</div><input type="time" step="1" class="field-input" id="mob-m-start" style="background:var(--surface2);"></div>
         <div class="mob-field-wrap"><div class="mob-field-lbl">结束时间 *</div><input type="time" step="1" class="field-input" id="mob-m-end" style="background:var(--surface2);"></div>
@@ -823,7 +825,7 @@ const STORAGE_KEY = 'english_sessions';
 const ACTIVE_KEY  = 'english_active_session';
 const CONTENT_TYPE_KEY = 'english_content_types';
 const ARTICLE_TITLES_KEY = 'english_article_titles';
-const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习'];
+const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习','Period'];
 const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
 
 let timerInterval = null;
@@ -832,6 +834,8 @@ let editingRecordId = null;
 let recognition = null;
 let recognitionActive = false;
 let statsCategoryFilter = '';
+const DAILY_CHART_MAX_MINUTES = 12 * 60;
+const MONTHLY_CHART_MAX_MINUTES = 150 * 60;
 
 // ════════════════════════════════════════════════════════
 // STORAGE
@@ -840,7 +844,7 @@ function getSessions(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||
 function saveSessions(a){localStorage.setItem(STORAGE_KEY,JSON.stringify(a))}
 function getActive(){try{return JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null')}catch{return null}}
 function saveActive(o){if(o)localStorage.setItem(ACTIVE_KEY,JSON.stringify(o));else localStorage.removeItem(ACTIVE_KEY)}
-function normalizeCategoryValue(v){const t=String(v||'').trim();return LEGACY_ENGLISH_CATEGORIES.includes(t)?'英语学习':t}
+function normalizeCategoryValue(v){const t=String(v||'').trim();if(LEGACY_ENGLISH_CATEGORIES.includes(t))return'英语学习';if(t==='月经')return'Period';return t}
 function normalizeDateValue(v){const t=String(v||'').trim();if(!t)return'';const n=t.replace(/[./]/g,'-').replace(/年/g,'-').replace(/月/g,'-').replace(/日/g,'').replace(/\s+/g,'');const m=n.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(!m)return t;return`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`}
 function getContentTypeOptions(){try{const s=JSON.parse(localStorage.getItem(CONTENT_TYPE_KEY)||'null');if(Array.isArray(s)){const c=s.map(v=>normalizeCategoryValue(v)).filter(Boolean);if(c.length)return[...new Set(c)]}}catch{}return[...DEFAULT_CONTENT_NOTE_OPTIONS]}
 function saveContentTypeOptions(a){const c=[...new Set(a.map(v=>normalizeCategoryValue(v)).filter(Boolean))];localStorage.setItem(CONTENT_TYPE_KEY,JSON.stringify(c.length?c:DEFAULT_CONTENT_NOTE_OPTIONS))}
@@ -859,10 +863,23 @@ function fmtMinutes(m){if(!m&&m!==0)return'—';const h=Math.floor(m/60),mm=m%60
 function fmtHours(m,d=1){return`${((Number(m)||0)/60).toFixed(d)}h`}
 function fmtElapsed(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0')}
 function todayStr(){return localDateStr()}
+function addDays(dateStr,days){const d=new Date(normalizeDateValue(dateStr));d.setDate(d.getDate()+days);return localDateStr(d)}
 function uid(){if(crypto.randomUUID)return crypto.randomUUID().replace(/-/g,'').slice(0,12);return Math.random().toString(36).slice(2,10)+Date.now().toString(36)}
 function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function toFullTime(v){if(!v)return'';return v.length===5?v+':00':v}
 function toInputTime(v){return v?v.slice(0,5):''}
+function isRangeCategory(note){return normalizeCategoryValue(note)==='Period'}
+function resolveRange(date,startTime,endTime,crossDay=false){
+  const start=timeStrToDate(date,startTime),endBase=timeStrToDate(date,endTime);
+  const overnight=crossDay||endBase<start;
+  return{start,end:overnight?new Date(endBase.getTime()+86400000):endBase,crossDay:overnight};
+}
+function displayEndTime(session){return `${session.cross_day?'次日 ':''}${(session.end_time||'—').slice(0,5)}`}
+function diffDaysInclusive(startDate,endDate){return Math.floor((timeStrToDate(endDate,'00:00:00')-timeStrToDate(startDate,'00:00:00'))/86400000)+1}
+function isRangeRecord(session){return session.record_type==='range'||(normalizeCategoryValue(session.content_note)==='Period'&&!!session.end_date)}
+function formatRecordRange(session){return session.end_date&&session.end_date!==session.date?`${session.date} ~ ${session.end_date}`:session.date}
+function formatRecordDuration(session){return isRangeRecord(session)?`${diffDaysInclusive(session.date,session.end_date||session.date)}天`:fmtMinutes(session.duration_minutes)}
+function formatRecordPrimary(session){return isRangeRecord(session)?formatRecordRange(session):`${session.start_time.slice(0,5)} – ${displayEndTime(session)}`}
 
 // ════════════════════════════════════════════════════════
 // UI HELPERS — dual target (PC + mobile selectors)
@@ -915,6 +932,11 @@ function refreshContentTypeUI(){
 }
 function refreshArticleTitleUI(){
   $id('article-title-options').innerHTML=getArticleTitles().map(t=>`<option value="${escapeHtml(t)}"></option>`).join('');
+}
+function updatePrimaryActionLabels(){
+  const label=isRangeCategory(getContentNote())?'记录区间':'▶ 开始计时';
+  if($id('pc-btn-start'))$id('pc-btn-start').textContent=label;
+  if($id('mob-btn-start'))$id('mob-btn-start').textContent=label;
 }
 function hydratePreferencesFromSessions(){
   const sessions=getSessions();
@@ -977,9 +999,20 @@ function getArticleTitle(){return isMobile()?getMobArticle():getPCArticle()}
 function startSession(){
   if(getActive()){showToast('已有进行中的计时，请先结束','error');return}
   const note=getContentNote(),article=getArticleTitle();
+  if(isRangeCategory(note)){
+    openAddModal();
+    const root=getActiveModalRoot();
+    setModalContentNote(note,root);
+    const articleField=modalField('m-article',root);
+    if(articleField)articleField.value=article;
+    updateModalMode(root,note);
+    updateDurationPreview(root);
+    showToast('Period 请记录开始日期和结束日期','success');
+    return;
+  }
   ensureContentTypeExists(note);rememberArticleTitle(article);
   const now=new Date();
-  saveActive({id:uid(),date:normalizeDateValue(localDateStr(now)),start_time:localTimeStr(now),end_time:'',duration_minutes:'',content_note:note,article_title:article,status:'active'});
+  saveActive({id:uid(),date:normalizeDateValue(localDateStr(now)),start_time:localTimeStr(now),end_time:'',duration_minutes:'',content_note:note,article_title:article,status:'active',record_type:'timer'});
   refreshContentTypeUI();refreshArticleTitleUI();
   showToast('计时开始','success');updateTimerUI();startTick();
 }
@@ -990,7 +1023,7 @@ function endSession(){
   const note=getContentNote()||active.content_note,article=getArticleTitle()||active.article_title;
   ensureContentTypeExists(note);rememberArticleTitle(article);
   const sessions=getSessions();
-  sessions.push({...active,end_time:localTimeStr(now),duration_minutes:dur,content_note:note,article_title:article,status:'completed'});
+  sessions.push({...active,end_time:localTimeStr(now),duration_minutes:dur,content_note:note,article_title:article,status:'completed',cross_day:normalizeDateValue(localDateStr(now))!==normalizeDateValue(active.date),record_type:'timer'});
   saveSessions(sessions);saveActive(null);
   refreshContentTypeUI();refreshArticleTitleUI();
   clearInterval(timerInterval);timerInterval=null;
@@ -1001,6 +1034,7 @@ function resetInputs(){
   ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{const el=$id(id);if(el)el.value=''});
   ['pc-content-note-input','mob-content-note-input'].forEach(id=>{const el=$id(id);if(el){el.value='';el.style.display='none'}});
   ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=''});
+  updatePrimaryActionLabels();
 }
 function startTick(){clearInterval(timerInterval);timerInterval=setInterval(tickTimer,1000);tickTimer()}
 function tickTimer(){
@@ -1059,10 +1093,10 @@ function renderToday(){
   const allDone=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>(b.date+b.start_time).localeCompare(a.date+a.start_time)).slice(0,5);
   // PC recent
   const pcList=$id('pc-recent-list');
-  if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${s.start_time.slice(0,5)} – ${s.end_time?s.end_time.slice(0,5):'—'}</span><span class="record-duration">${fmtMinutes(s.duration_minutes)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button></div></div>`).join('');}}
+  if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${formatRecordPrimary(s)}</span><span class="record-duration">${formatRecordDuration(s)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button></div></div>`).join('');}}
   // Mobile recent
   const mobList=$id('mob-recent-list');
-  if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${fmtMinutes(s.duration_minutes)}</div><div class="mob-rec-meta">${s.start_time.slice(0,5)} – ${s.end_time?s.end_time.slice(0,5):'—'} · ${s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button></div>`).join('');}}
+  if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${formatRecordDuration(s)}</div><div class="mob-rec-meta">${formatRecordPrimary(s)}${isRangeRecord(s)?'':' · '+s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button></div>`).join('');}}
 }
 
 // ════════════════════════════════════════════════════════
@@ -1076,10 +1110,10 @@ function renderLog(){
   if(fNote)sessions=sessions.filter(s=>s.content_note===fNote);
   // PC table
   const tbody=$id('pc-log-tbody');
-  if(tbody){if(!sessions.length){tbody.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';}else{tbody.innerHTML=sessions.map(s=>`<tr><td class="td-muted td-mono">${escapeHtml(s.date)}</td><td class="td-mono">${escapeHtml(s.start_time)}</td><td class="td-mono">${escapeHtml(s.end_time||'—')}</td><td class="td-mono" style="font-weight:600;">${s.duration_minutes!=null&&s.duration_minutes!==''?escapeHtml(String(s.duration_minutes))+' 分':'—'}</td><td>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:'<span class="td-muted">—</span>'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'—')}</td><td><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></td></tr>`).join('');}}
+  if(tbody){if(!sessions.length){tbody.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';}else{tbody.innerHTML=sessions.map(s=>`<tr><td class="td-muted td-mono">${escapeHtml(s.date)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?'—':s.start_time)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?(s.end_date||s.date):displayEndTime(s))}</td><td class="td-mono" style="font-weight:600;">${escapeHtml(formatRecordDuration(s))}</td><td>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:'<span class="td-muted">—</span>'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'—')}</td><td><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></td></tr>`).join('');}}
   // Mobile list
   const mlist=$id('mob-log-list');
-  if(mlist){if(!sessions.length){mlist.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mlist.innerHTML=sessions.map(s=>`<div class="mob-log-item"><div class="mob-log-date"><div class="mob-log-day">${s.date.slice(8)}</div><div class="mob-log-mon">${s.date.slice(5,7)}月</div></div><div class="mob-log-detail"><div class="mob-log-times">${s.start_time.slice(0,5)} – ${s.end_time?s.end_time.slice(0,5):'—'}${s.content_note?' · '+escapeHtml(s.content_note):''}</div><div class="mob-log-article">${escapeHtml(s.article_title||'—')}</div></div><div class="mob-log-right"><div class="mob-log-dur">${fmtMinutes(s.duration_minutes)}</div><div class="mob-log-btns"><button class="mob-log-btn" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-log-btn" onclick="deleteRecord('${s.id}')" style="color:var(--red);">✕</button></div></div></div>`).join('');}}
+  if(mlist){if(!sessions.length){mlist.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mlist.innerHTML=sessions.map(s=>`<div class="mob-log-item"><div class="mob-log-date"><div class="mob-log-day">${s.date.slice(8)}</div><div class="mob-log-mon">${s.date.slice(5,7)}月</div></div><div class="mob-log-detail"><div class="mob-log-times">${isRangeRecord(s)?formatRecordRange(s):`${s.start_time.slice(0,5)} – ${displayEndTime(s)}`}${s.content_note?' · '+escapeHtml(s.content_note):''}</div><div class="mob-log-article">${escapeHtml(s.article_title||'—')}</div></div><div class="mob-log-right"><div class="mob-log-dur">${formatRecordDuration(s)}</div><div class="mob-log-btns"><button class="mob-log-btn" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-log-btn" onclick="deleteRecord('${s.id}')" style="color:var(--red);">✕</button></div></div></div>`).join('');}}
 }
 
 function deleteRecord(id){
@@ -1097,11 +1131,21 @@ function setModalContentNote(v,root=getActiveModalRoot()){
   if(opts.includes(v)){sel.value=v;inp.value='';inp.style.display='none'}
   else if(v){sel.value='__custom__';inp.value=v;inp.style.display=''}
   else{sel.value='';inp.value='';inp.style.display='none'}
+  updateModalMode(root,getModalContentNote(root));
 }
 function getModalContentNote(root=getActiveModalRoot()){
   const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root);
   if(!sel||!inp)return'';
   return normalizeCategoryValue(sel.value==='__custom__'?inp.value.trim():sel.value);
+}
+function updateModalMode(root=getActiveModalRoot(),note=getModalContentNote(root)){
+  const isRange=isRangeCategory(note);
+  const endDateWrap=modalField('m-end-date-wrap',root),dateLabel=modalField('m-date-label',root);
+  const startField=modalField('m-start',root),endField=modalField('m-end',root);
+  const timeRow=startField?.closest('.modal-row, .mob-sheet-row');
+  if(endDateWrap)endDateWrap.style.display=isRange?'':'none';
+  if(dateLabel)dateLabel.textContent=isRange?'开始日期 *':'日期 *';
+  if(timeRow)timeRow.style.display=isRange?'none':'';
 }
 
 function openAddModal(recordId=null){
@@ -1112,12 +1156,14 @@ function openAddModal(recordId=null){
   const saveText=record?'保存修改':'保存';
   [$id('pc-modal-title'),$id('mob-modal-title')].forEach(el=>{if(el)el.textContent=titleText});
   [$id('modal-save-btn'),$id('mob-modal-save-btn')].forEach(el=>{if(el)el.textContent=saveText});
-  const dateField=modalField('m-date',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
+  const dateField=modalField('m-date',root),endDateField=modalField('m-end-date',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
   if(dateField)dateField.value=record?.date||todayStr();
+  if(endDateField)endDateField.value=record?.end_date||record?.date||todayStr();
   if(startField)startField.value=toInputTime(record?.start_time||'');
   if(endField)endField.value=toInputTime(record?.end_time||'');
   setModalContentNote(record?.content_note||'',root);
   if(articleField)articleField.value=record?.article_title||'';
+  updateModalMode(root,record?.content_note||'');
   setVoiceStatus('');resetVoiceBtn();updateDurationPreview(root);
   if(isMobile())$id('mob-add-modal').classList.add('open');
   else $id('pc-add-modal').classList.add('open');
@@ -1132,26 +1178,42 @@ function closeAddModal(){
 
 function saveManualRecord(){
   const root=getActiveModalRoot();
-  const dateField=modalField('m-date',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
+  const dateField=modalField('m-date',root),endDateField=modalField('m-end-date',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
   const date=normalizeDateValue(dateField?.value||''),start=startField?.value||'',end=endField?.value||'';
   const note=getModalContentNote(root),article=(articleField?.value||'').trim();
-  if(!date||!start||!end){showToast('日期、开始和结束时间为必填','error');return}
-  const sf=toFullTime(start),ef=toFullTime(end),dur=diffMinutesFloor(timeStrToDate(date,sf),timeStrToDate(date,ef));
-  if(dur<0){showToast('结束时间不能早于开始时间','error');return}
   ensureContentTypeExists(note);rememberArticleTitle(article);
   const sessions=getSessions(),isEditing=!!editingRecordId;
-  if(isEditing){const idx=sessions.findIndex(s=>s.id===editingRecordId);if(idx===-1){showToast('未找到记录','error');return};sessions[idx]={...sessions[idx],date,start_time:sf,end_time:ef,duration_minutes:dur,content_note:note,article_title:article,status:'completed'}}
-  else sessions.push({id:uid(),date,start_time:sf,end_time:ef,duration_minutes:dur,content_note:note,article_title:article,status:'completed'});
+  if(isRangeCategory(note)){
+    const endDate=normalizeDateValue(endDateField?.value||date);
+    if(!date||!endDate){showToast('开始日期和结束日期为必填','error');return}
+    if(endDate<date){showToast('结束日期不能早于开始日期','error');return}
+    const payload={date,end_date:endDate,start_time:'',end_time:'',duration_minutes:0,content_note:note,article_title:article,status:'completed',cross_day:false,record_type:'range'};
+    if(isEditing){const idx=sessions.findIndex(s=>s.id===editingRecordId);if(idx===-1){showToast('未找到记录','error');return};sessions[idx]={...sessions[idx],...payload}}
+    else sessions.push({id:uid(),...payload});
+  }else{
+    if(!date||!start||!end){showToast('日期、开始和结束时间为必填','error');return}
+    const sf=toFullTime(start),ef=toFullTime(end),range=resolveRange(date,sf,ef),dur=diffMinutesFloor(range.start,range.end);
+    const payload={date,start_time:sf,end_time:ef,duration_minutes:dur,content_note:note,article_title:article,status:'completed',cross_day:range.crossDay,record_type:'timer',end_date:''};
+    if(isEditing){const idx=sessions.findIndex(s=>s.id===editingRecordId);if(idx===-1){showToast('未找到记录','error');return};sessions[idx]={...sessions[idx],...payload}}
+    else sessions.push({id:uid(),...payload});
+  }
   saveSessions(sessions);closeAddModal();refreshContentTypeUI();refreshArticleTitleUI();renderAll();
   showToast(isEditing?'修改已保存':'补录成功','success');
 }
 
 function updateDurationPreview(root=getActiveModalRoot()){
-  const date=modalField('m-date',root)?.value||'',start=modalField('m-start',root)?.value||'',end=modalField('m-end',root)?.value||'',el=modalField('m-duration-preview',root);
+  const date=modalField('m-date',root)?.value||'',endDate=modalField('m-end-date',root)?.value||'',start=modalField('m-start',root)?.value||'',end=modalField('m-end',root)?.value||'',el=modalField('m-duration-preview',root);
   if(!el)return;
+  const note=getModalContentNote(root);
+  if(isRangeCategory(note)){
+    if(!date||!endDate){el.textContent='';return}
+    el.textContent=endDate<date?'⚠ 结束日期早于开始日期':`预计区间：${diffDaysInclusive(date,endDate)} 天`;
+    return;
+  }
   if(!date||!start||!end){el.textContent='';return}
-  const d=diffMinutesFloor(timeStrToDate(date,start+':00'),timeStrToDate(date,end+':00'));
-  el.textContent=d>=0?`预计时长：${d} 分钟`:'⚠ 结束时间早于开始时间';
+  const range=resolveRange(date,start+':00',end+':00');
+  const d=diffMinutesFloor(range.start,range.end);
+  el.textContent=`预计时长：${d} 分钟${range.crossDay?'（自动按次日结束计算）':''}`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1244,13 +1306,13 @@ function saveContentTypeManager(){saveContentTypeOptions(getContentTypeManagerVa
 // ════════════════════════════════════════════════════════
 function exportCSV(){
   const sessions=getSessions().filter(s=>s.status==='completed').sort((a,b)=>(a.date+a.start_time).localeCompare(b.date+b.start_time));
-  const header=['date','start_time','end_time','duration_minutes','content_note','article_title'];
-  const rows=sessions.map(s=>[s.date,s.start_time,s.end_time,s.duration_minutes,s.content_note,s.article_title].map(v=>v==null?'':String(v)));
+  const header=['date','end_date','start_time','end_time','duration_minutes','content_note','article_title','cross_day','record_type'];
+  const rows=sessions.map(s=>[s.date,s.end_date||'',s.start_time,s.end_time,s.duration_minutes,s.content_note,s.article_title,s.cross_day?'1':'0',s.record_type||'timer'].map(v=>v==null?'':String(v)));
   const csv=[header,...rows].map(r=>r.map(c=>(c.includes(',')||c.includes('"')||c.includes('\n'))?`"${c.replace(/"/g,'""')}"`:c).join(',')).join('\r\n');
   const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`活动记录_${todayStr()}.csv`;a.click();
   showToast(`已导出 ${sessions.length} 条记录`,'success');
 }
-const COL_MAP={date:['date','日期','Date'],start_time:['start_time','starttime','start','开始时间','开始'],end_time:['end_time','endtime','end','结束时间','结束'],duration_minutes:['duration_minutes','duration','minutes','时长','duration_min'],content_note:['content_note','note','content','内容','备注','contentNote'],article_title:['article_title','title','article','文章','事项','项目','articleTitle']};
+const COL_MAP={date:['date','日期','Date'],end_date:['end_date','结束日期'],start_time:['start_time','starttime','start','开始时间','开始'],end_time:['end_time','endtime','end','结束时间','结束'],duration_minutes:['duration_minutes','duration','minutes','时长','duration_min'],content_note:['content_note','note','content','内容','备注','contentNote'],article_title:['article_title','title','article','文章','事项','项目','articleTitle'],cross_day:['cross_day','crossday','overnight','next_day','次日结束'],record_type:['record_type','type','记录类型']};
 function normalizeHeader(h){return h.toLowerCase().replace(/[\s_-]/g,'')}
 function mapHeaders(headers){const r={};headers.forEach((raw,idx)=>{const n=normalizeHeader(raw);for(const[field,aliases]of Object.entries(COL_MAP)){if(aliases.some(a=>normalizeHeader(a)===n)){r[field]=idx;break}}});return r}
 function parseCSVLine(line){const result=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++}else inQ=!inQ}else if(c===','&&!inQ){result.push(cur);cur=''}else cur+=c}result.push(cur);return result}
@@ -1267,11 +1329,23 @@ function importCSV(event){
     for(let i=1;i<lines.length;i++){
       const cells=parseCSVLine(lines[i]).map(c=>c.trim()),get=(f)=>colMap[f]!==undefined?(cells[colMap[f]]||''):'';
       const date=normalizeDateValue(get('date')),start_time=get('start_time');
-      if(!date||!start_time){skipped++;continue}
+      const recordType=get('record_type')||'';
+      const contentNote=normalizeCategoryValue(get('content_note'));
+      if(!date){skipped++;continue}
+      if((recordType==='range'||isRangeCategory(contentNote))&&!get('end_date')){existing.push({id:uid(),date,end_date:date,start_time:'',end_time:'',duration_minutes:0,content_note:contentNote,article_title:get('article_title'),status:'completed',cross_day:false,record_type:'range'});imported++;continue}
+      if(!(recordType==='range'||isRangeCategory(contentNote))&&!start_time){skipped++;continue}
       const key=date+'|'+start_time;if(existingIds.has(key)){skipped++;continue}
-      const end_time=get('end_time');let dm=parseInt(get('duration_minutes'));
-      if(isNaN(dm)||dm<0){if(start_time&&end_time){const s=timeStrToDate(date,start_time.length===5?start_time+':00':start_time);const e=timeStrToDate(date,end_time.length===5?end_time+':00':end_time);dm=diffMinutesFloor(s,e)}else dm=0}
-      existing.push({id:uid(),date,start_time:start_time.length===5?start_time+':00':start_time,end_time:end_time.length===5?end_time+':00':end_time,duration_minutes:dm,content_note:normalizeCategoryValue(get('content_note')),article_title:get('article_title'),status:'completed'});
+      const end_time=get('end_time');
+      const normalizedStart=start_time.length===5?start_time+':00':start_time;
+      const normalizedEnd=end_time.length===5?end_time+':00':end_time;
+      const importedCrossDay=['1','true','yes','y'].includes(String(get('cross_day')||'').toLowerCase());
+      let dm=parseInt(get('duration_minutes'));let crossDay=importedCrossDay;
+      if(recordType==='range'||isRangeCategory(contentNote)){existing.push({id:uid(),date,end_date:normalizeDateValue(get('end_date')||date),start_time:'',end_time:'',duration_minutes:0,content_note:contentNote,article_title:get('article_title'),status:'completed',cross_day:false,record_type:'range'})}
+      else{
+        if(isNaN(dm)||dm<0){if(normalizedStart&&normalizedEnd){const range=resolveRange(date,normalizedStart,normalizedEnd,importedCrossDay);dm=diffMinutesFloor(range.start,range.end);crossDay=range.crossDay}else dm=0}
+        else if(normalizedStart&&normalizedEnd){crossDay=resolveRange(date,normalizedStart,normalizedEnd,importedCrossDay).crossDay}
+        existing.push({id:uid(),date,end_date:'',start_time:normalizedStart,end_time:normalizedEnd,duration_minutes:dm,content_note:contentNote,article_title:get('article_title'),status:'completed',cross_day:crossDay,record_type:'timer'});
+      }
       existingIds.add(key);imported++;
     }
     saveSessions(existing);hydratePreferencesFromSessions();refreshContentTypeUI();refreshArticleTitleUI();renderAll();
@@ -1335,21 +1409,21 @@ function renderHeatmap(yr,dayMap){
 function renderDailyBar(dayMap){
   const today=new Date(),month=today.getMonth();const dim=new Date(statsYear,month+1,0).getDate();
   const days=[];for(let d=1;d<=dim;d++)days.push(`${statsYear}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
-  const vals=days.map(d=>(dayMap[d]||{}).minutes||0),maxV=Math.max(...vals,1);
+  const vals=days.map(d=>(dayMap[d]||{}).minutes||0),maxV=DAILY_CHART_MAX_MINUTES;
   const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
-  [$id('pc-daily-chart-title'),$id('mob-daily-chart-title')].forEach(el=>{if(el)el.textContent=`${statsYear}年${month+1}月每日时长${sfx}`});
-  const html=vals.map((v,i)=>{const pct=(v/maxV)*100;const showLabel=(i===0)||((i+1)%5===0)||i===vals.length-1;return`<div class="bar-group"><div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${days[i]}: ${fmtHours(v)}" onclick="showBarDetail('daily',this)"></div><div class="bar-label">${showLabel?String(i+1):''}</div></div>`}).join('');
+  [$id('pc-daily-chart-title'),$id('mob-daily-chart-title')].forEach(el=>{if(el)el.textContent=`${statsYear}年${month+1}月每日时长${sfx}（满格 12h）`});
+  const html=vals.map((v,i)=>{const safeV=Math.min(v,maxV);const pct=(safeV/maxV)*100;const showLabel=(i===0)||((i+1)%5===0)||i===vals.length-1;return`<div class="bar-group"><div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${days[i]}: ${fmtHours(v)} / 12h" onclick="showBarDetail('daily',this)"></div><div class="bar-label">${showLabel?String(i+1):''}</div></div>`}).join('');
   [$id('pc-bar-chart-daily'),$id('mob-bar-chart-daily')].forEach(el=>{if(el)el.innerHTML=html});
-  [$id('pc-daily-chart-detail'),$id('mob-daily-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值'});
+  [$id('pc-daily-chart-detail'),$id('mob-daily-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值（按 12 小时固定刻度）'});
 }
 function renderMonthlyBar(yr,dayMap){
   const months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   const vals=months.map((_,m)=>{const p=`${yr}-${String(m+1).padStart(2,'0')}`;return Object.entries(dayMap).filter(([d])=>d.startsWith(p)).reduce((a,[,v])=>a+v.minutes,0)});
-  const maxV=Math.max(...vals,1);const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
-  [$id('pc-monthly-chart-title'),$id('mob-monthly-chart-title')].forEach(el=>{if(el)el.textContent=`${yr}年各月时长${sfx}`});
-  const html=vals.map((v,i)=>{const pct=(v/maxV)*100;return`<div class="bar-group"><div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)}" onclick="showBarDetail('monthly',this)"></div><div class="bar-label">${months[i].replace('月','')}</div></div>`}).join('');
+  const maxV=MONTHLY_CHART_MAX_MINUTES;const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
+  [$id('pc-monthly-chart-title'),$id('mob-monthly-chart-title')].forEach(el=>{if(el)el.textContent=`${yr}年各月时长${sfx}（满格 150h）`});
+  const html=vals.map((v,i)=>{const safeV=Math.min(v,maxV);const pct=(safeV/maxV)*100;return`<div class="bar-group"><div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)} / 150h" onclick="showBarDetail('monthly',this)"></div><div class="bar-label">${months[i].replace('月','')}</div></div>`}).join('');
   [$id('pc-bar-chart-monthly'),$id('mob-bar-chart-monthly')].forEach(el=>{if(el)el.innerHTML=html});
-  [$id('pc-monthly-chart-detail'),$id('mob-monthly-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值'});
+  [$id('pc-monthly-chart-detail'),$id('mob-monthly-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值（按 150 小时固定刻度）'});
 }
 function showBarDetail(type,element){
   document.querySelectorAll(`.bar-fill[data-chart="${type}"]`).forEach(el=>el.classList.remove('active'));
@@ -1379,15 +1453,17 @@ $id('mob-filter-note').addEventListener('change',renderLog);
 $id('pc-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;renderStats()});
 $id('mob-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;renderStats()});
 forEachModalRoot(root=>{
-  ['m-start','m-end','m-date'].forEach(name=>{
+  ['m-start','m-end','m-date','m-end-date'].forEach(name=>{
     const field=modalField(name,root);
     if(field)field.addEventListener('change',()=>updateDurationPreview(root));
   });
   const noteSel=modalField('m-note-sel',root),noteInput=modalField('m-note-input',root);
-  if(noteSel&&noteInput)noteSel.addEventListener('change',function(){noteInput.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')noteInput.value=''});
+  if(noteSel&&noteInput)noteSel.addEventListener('change',function(){noteInput.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')noteInput.value='';updateModalMode(root,getModalContentNote(root));updateDurationPreview(root)});
 });
 $id('pc-content-note-sel').addEventListener('change',function(){const inp=$id('pc-content-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
 $id('mob-content-note-sel').addEventListener('change',function(){const inp=$id('mob-content-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
+$id('pc-content-note-sel').addEventListener('change',updatePrimaryActionLabels);
+$id('mob-content-note-sel').addEventListener('change',updatePrimaryActionLabels);
 $id('pc-add-modal').addEventListener('click',function(e){if(e.target===this)closeAddModal()});
 $id('pc-content-type-modal').addEventListener('click',function(e){if(e.target===this)closeContentTypeManager()});
 
@@ -1403,7 +1479,7 @@ function renderAll(){
 }
 function init(){
   hydratePreferencesFromSessions();refreshContentTypeUI();refreshArticleTitleUI();
-  initStatsYear();updateTimerUI();renderAll();
+  initStatsYear();updateTimerUI();updatePrimaryActionLabels();renderAll();
 }
 init();
 </script>
