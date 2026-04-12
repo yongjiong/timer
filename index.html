@@ -2,585 +2,507 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>活动计时</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #F4F6F8;
-    --surface: #FFFFFF;
-    --border: #DDE3EA;
-    --border-light: #EEF1F5;
-    --ink: #1A2733;
-    --ink-2: #3D5060;
-    --muted: #7A90A0;
-    --accent: #3A6EA8;
-    --accent-soft: #EAF0F8;
-    --accent-mid: #C5D8EE;
-    --green: #2E7D52;
-    --green-soft: #E8F5EE;
-    --red: #C0392B;
-    --red-soft: #FDECEA;
-    --amber: #7A5C1A;
-    --amber-soft: #FDF5E4;
-    --heat-0: #EAECEE;
-    --heat-1: #C5D8EE;
-    --heat-2: #7FA8C4;
-    --heat-3: #3A6EA8;
-    --heat-4: #1B3F66;
-    --radius: 8px;
-    --shadow: 0 1px 4px rgba(0,0,0,0.08);
-    --shadow-md: 0 2px 12px rgba(0,0,0,0.10);
-  }
+/* ════════════════════════════════════
+   SHARED CSS VARIABLES
+   ════════════════════════════════════ */
+:root {
+  --bg:           #F4F6F9;
+  --surface:      #FFFFFF;
+  --surface2:     #F0F2F7;
+  --border:       #DDE3EA;
+  --border-light: #EEF1F5;
+  --ink:          #1A2733;
+  --ink-2:        #3D5060;
+  --muted:        #7A90A0;
+  --accent:       #3A6EA8;
+  --accent-soft:  #EAF0F8;
+  --accent-mid:   #C5D8EE;
+  --green:        #2E7D52;
+  --green-soft:   #E8F5EE;
+  --red:          #C0392B;
+  --red-soft:     #FDECEA;
+  --heat-0:       #EAECEE;
+  --heat-1:       #C5D8EE;
+  --heat-2:       #7FA8C4;
+  --heat-3:       #3A6EA8;
+  --heat-4:       #1B3F66;
+  --radius:       8px;
+  --shadow:       0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:    0 2px 12px rgba(0,0,0,0.10);
+  --nav-h:        68px;
+  --safe-bottom:  env(safe-area-inset-bottom, 0px);
+}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-  body {
-    font-family: 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    font-size: 14px;
-    line-height: 1.6;
-  }
+body {
+  font-family: 'Noto Sans SC', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* ── Layout ── */
-  .app-header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 100;
-    padding: 0 24px;
-  }
-  .header-inner {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 52px;
-  }
-  .app-title { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
+/* ════════════════════════════════════
+   SHARED COMPONENTS
+   ════════════════════════════════════ */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.badge-note { background: var(--accent-soft); color: var(--accent); }
 
-  .tabs { display: flex; gap: 0; }
-  .tab-btn {
-    background: none; border: none; cursor: pointer;
-    padding: 0 16px; height: 52px;
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-btn:hover { color: var(--ink-2); }
+.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.field-input, .field-select {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; color: var(--ink); background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none; font-family: inherit; appearance: none; -webkit-appearance: none;
+}
+.field-input:focus, .field-select:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: var(--surface);
+}
+.field-input::placeholder { color: var(--muted); }
 
-  .app-body { max-width: 900px; margin: 0 auto; padding: 24px 24px 60px; }
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border: none; border-radius: var(--radius);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #2d5a8a; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-danger { background: var(--red-soft); color: var(--red); border: 1px solid #f5c6c2; }
+.btn-danger:hover { background: #fad4d0; }
+.btn-secondary { background: var(--bg); color: var(--ink-2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border-light); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
 
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); transition: all 0.3s; flex-shrink: 0; }
+.status-dot.running { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px var(--green-soft)}50%{box-shadow:0 0 0 6px rgba(46,125,82,0.06)} }
 
-  /* ── Cards ── */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-  }
-  .card-body { padding: 20px 24px; }
-  .card + .card { margin-top: 16px; }
+.voice-status { display: none; font-size: 12px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-mid); border-radius: 6px; padding: 8px 10px; }
+.voice-status.show { display: block; }
 
-  /* ── Today Stats Bar ── */
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-  }
-  .stat-cell {
-    background: var(--surface);
-    padding: 16px 20px;
-    text-align: center;
-  }
-  .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
-  .stat-value { font-size: 26px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .stat-unit { font-size: 13px; font-weight: 400; color: var(--ink-2); margin-left: 2px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 3px; }
+.bar-group { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; flex: 1; height: 100%; }
+.bar-fill { width: 100%; border-radius: 3px 3px 0 0; background: var(--accent-mid); min-height: 2px; cursor: pointer; transition: background 0.2s; }
+.bar-fill:hover, .bar-fill.active { background: var(--accent); }
+.bar-label { font-size: 9px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+.chart-detail { margin-top: 10px; min-height: 18px; font-size: 12px; color: var(--ink-2); }
 
-  /* ── Timer Panel ── */
-  .timer-panel { padding: 24px; }
-  .timer-status {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 20px;
-  }
-  .status-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--border);
-    transition: background 0.3s;
-  }
-  .status-dot.active { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); animation: pulse 2s infinite; }
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 3px var(--green-soft); }
-    50% { box-shadow: 0 0 0 6px rgba(46,125,82,0.1); }
-  }
-  .status-text { font-size: 13px; color: var(--muted); }
-  .timer-display {
-    font-size: 44px; font-weight: 700; letter-spacing: 0.04em;
-    color: var(--ink); font-variant-numeric: tabular-nums;
-    margin-bottom: 20px; line-height: 1;
-  }
-  .timer-display.active { color: var(--accent); }
+.heatmap-cell { width: 13px; height: 13px; border-radius: 2px; background: var(--heat-0); }
+.heatmap-cell[data-lvl="1"] { background: var(--heat-1); }
+.heatmap-cell[data-lvl="2"] { background: var(--heat-2); }
+.heatmap-cell[data-lvl="3"] { background: var(--heat-3); }
+.heatmap-cell[data-lvl="4"] { background: var(--heat-4); }
+.heatmap-cell[data-future="1"] { background: transparent; }
 
-  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .field-group { display: flex; flex-direction: column; gap: 4px; }
-  .field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-  .field-input, .field-select {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 13px;
-    color: var(--ink);
-    background: var(--bg);
-    transition: border-color 0.15s, box-shadow 0.15s;
-    outline: none;
-    font-family: inherit;
-  }
-  .field-input:focus, .field-select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-    background: var(--surface);
-  }
+.toast-common {
+  padding: 10px 16px; border-radius: 6px; font-size: 13px;
+  box-shadow: var(--shadow-md); animation: toastAnim 0.2s ease;
+  font-family: 'DM Mono', monospace;
+}
+@keyframes toastAnim { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.toast-common.success { background: var(--green); color: #fff; }
+.toast-common.error   { background: var(--red);   color: #fff; }
+.toast-common.warning { background: #8a6d0b;      color: #fff; }
 
-  .btn-row { display: flex; gap: 12px; }
-  .btn {
-    flex: 1; padding: 12px 20px;
-    border: none; border-radius: var(--radius);
-    font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: all 0.15s;
-    font-family: inherit;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  .btn-start {
-    background: var(--accent); color: #fff;
-  }
-  .btn-start:hover { background: #2d5a8a; transform: translateY(-1px); box-shadow: var(--shadow-md); }
-  .btn-end {
-    background: var(--red-soft); color: var(--red);
-    border: 1px solid #f5c6c2;
-  }
-  .btn-end:hover { background: #fad4d0; }
-  .btn-secondary {
-    background: var(--bg); color: var(--ink-2);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover { background: var(--border-light); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+/* Shared modal/sheet overlay */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
 
-  /* ── Recent Records ── */
-  .section-title {
-    font-size: 12px; font-weight: 600; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    margin-bottom: 12px;
-  }
-  .record-list { display: flex; flex-direction: column; gap: 8px; }
-  .record-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 12px;
-    background: var(--bg);
-    border-radius: 6px;
-    border: 1px solid var(--border-light);
-    font-size: 13px;
-  }
-  .record-time { color: var(--muted); min-width: 120px; font-variant-numeric: tabular-nums; }
-  .record-duration { font-weight: 600; min-width: 54px; }
-  .record-note {
-    flex: 1; color: var(--ink-2);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .record-article { color: var(--muted); font-size: 12px; }
-  .badge {
-    display: inline-block; padding: 2px 8px;
-    border-radius: 4px; font-size: 11px; font-weight: 500;
-  }
-  .badge-note {
-    background: var(--accent-soft); color: var(--accent);
-  }
-  .badge-active {
-    background: var(--green-soft); color: var(--green);
-  }
+datalist { display: none; }
 
-  /* ── Log Tab ── */
-  .toolbar {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 16px; flex-wrap: wrap;
-  }
-  .toolbar input, .toolbar select {
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 13px;
-    color: var(--ink);
-    background: var(--surface);
-    outline: none;
-    font-family: inherit;
-  }
-  .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
+/* ════════════════════════════════════
+   ██████  PC LAYOUT  (≥ 768px)
+   ════════════════════════════════════ */
+.pc-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100; padding: 0 24px;
+}
+.pc-header-inner {
+  max-width: 960px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; height: 52px;
+}
+.app-title { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+.pc-tabs { display: flex; }
+.pc-tab-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 0 16px; height: 52px; font-size: 13px; font-weight: 500; color: var(--muted);
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; font-family: inherit;
+}
+.pc-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pc-tab-btn:hover { color: var(--ink-2); }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead th {
-    text-align: left; padding: 8px 10px;
-    color: var(--muted); font-weight: 600; font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.05em;
-    border-bottom: 1px solid var(--border);
-  }
-  tbody tr { border-bottom: 1px solid var(--border-light); }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: var(--bg); }
-  tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
-  .td-muted { color: var(--muted); }
-  .td-mono { font-variant-numeric: tabular-nums; }
-  .btn-del {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); padding: 4px 6px; border-radius: 4px;
-    font-size: 12px; transition: all 0.15s;
-  }
-  .btn-del:hover { background: var(--red-soft); color: var(--red); }
-  .row-actions { display:flex; align-items:center; gap:4px; justify-content:flex-end; }
-  .btn-edit {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); padding: 4px 6px; border-radius: 4px;
-    font-size: 12px; transition: all 0.15s;
-  }
-  .btn-edit:hover { background: var(--accent-soft); color: var(--accent); }
+.pc-body { max-width: 960px; margin: 0 auto; padding: 24px 24px 60px; }
+.pc-panel { display: none; }
+.pc-panel.active { display: block; }
 
-  /* ── Add Record Modal ── */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.35); z-index: 200;
-    align-items: center; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: var(--surface);
-    border-radius: 10px;
-    width: 100%; max-width: 480px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
-    overflow: hidden;
-  }
-  .modal-header {
-    padding: 18px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .modal-title { font-size: 15px; font-weight: 600; }
-  .modal-close {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: 18px; line-height: 1;
-    padding: 4px; border-radius: 4px;
-  }
-  .modal-close:hover { color: var(--ink); }
-  .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
-  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
-  .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .voice-status {
-    display: none;
-    font-size: 12px;
-    color: var(--accent);
-    background: var(--accent-soft);
-    border: 1px solid var(--accent-mid);
-    border-radius: 6px;
-    padding: 8px 10px;
-  }
-  .voice-status.active { display: block; }
-  .field-inline { display:flex; gap:8px; align-items:center; }
-  .field-inline .field-select { flex:1; min-width:0; }
-  .inline-actions { display:flex; gap:8px; flex:0 0 auto; }
-  .inline-actions .btn {
-    flex:0;
-    min-width:48px;
-    height:32px;
-    padding:0 10px;
-    font-size:11px;
-    white-space:nowrap;
-    border-radius:999px;
-  }
-  .manager-list { display:flex; flex-direction:column; gap:10px; }
-  .manager-row { display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center; }
-  .manager-actions { display:flex; gap:6px; }
-  .manager-actions button {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--ink-2);
-    border-radius: 6px;
-    padding: 6px 8px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-  .manager-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-body { padding: 20px 24px; }
+.card + .card { margin-top: 16px; }
 
-  /* ── Stats Tab ── */
-  .stats-cards {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-    margin-bottom: 20px;
-  }
-  .stats-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-  .stats-summary {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  .summary-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 14px;
-    box-shadow: var(--shadow);
-    cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
-  }
-  .summary-item:hover { border-color: var(--accent-mid); transform: translateY(-1px); }
-  .summary-item.active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-  .summary-item.empty { cursor: default; }
-  .summary-item.empty:hover { transform: none; border-color: var(--border); }
-  .summary-item-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-  .summary-item-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .summary-item-time {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--accent);
-  }
-  .summary-item-meta {
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px 18px;
-    box-shadow: var(--shadow);
-  }
-  .stat-card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-  .stat-card-value { font-size: 22px; font-weight: 700; color: var(--ink); }
-  .stat-card-unit { font-size: 13px; font-weight: 400; color: var(--muted); }
+/* PC stats bar */
+.pc-stats-bar { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 16px; }
+.stat-cell { background: var(--surface); padding: 16px 20px; text-align: center; }
+.stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+.stat-value { font-size: 26px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat-unit { font-size: 13px; font-weight: 400; color: var(--ink-2); margin-left: 2px; }
 
-  .chart-wrap {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); box-shadow: var(--shadow);
-    padding: 20px 24px; margin-bottom: 16px;
-  }
-  .chart-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 16px; }
+/* PC timer */
+.timer-panel { padding: 24px; }
+.timer-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.status-text { font-size: 13px; color: var(--muted); }
+.timer-display { font-size: 44px; font-weight: 700; letter-spacing: 0.04em; color: var(--ink); font-variant-numeric: tabular-nums; margin-bottom: 20px; line-height: 1; font-family: 'DM Mono', monospace; }
+.timer-display.running { color: var(--accent); }
 
-  /* Heatmap */
-  .heatmap-scroll { overflow-x: auto; }
-  .heatmap { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
-  .heatmap-row { display: flex; align-items: center; gap: 8px; }
-  .heatmap-month-tag {
-    width: 34px;
-    flex: 0 0 34px;
-    font-size: 11px;
-    color: var(--muted);
-    text-align: right;
-  }
-  .heatmap-days { display: flex; gap: 3px; }
-  .heatmap-cell {
-    width: 13px; height: 13px; border-radius: 2px;
-    background: var(--heat-0);
-    cursor: default;
-    position: relative;
-  }
-  .heatmap-cell[data-lvl="1"] { background: var(--heat-1); }
-  .heatmap-cell[data-lvl="2"] { background: var(--heat-2); }
-  .heatmap-cell[data-lvl="3"] { background: var(--heat-3); }
-  .heatmap-cell[data-lvl="4"] { background: var(--heat-4); }
-  .heatmap-cell[data-future="1"] { background: transparent; }
-  .heatmap-legend {
-    display: flex; align-items: center; gap: 4px;
-    font-size: 11px; color: var(--muted);
-    margin-top: 8px; justify-content: flex-end;
-  }
-  .legend-cell { width: 12px; height: 12px; border-radius: 2px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.field-inline { display: flex; gap: 8px; align-items: center; }
+.field-inline .field-select { flex: 1; min-width: 0; }
+.inline-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.inline-actions .btn { flex: 0; min-width: 48px; height: 34px; padding: 0 12px; font-size: 12px; border-radius: 999px; }
 
-  /* Bar chart */
-  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
-  .bar-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    flex: 1;
-    height: 100%;
-  }
-  .bar-fill {
-    width: 100%; border-radius: 3px 3px 0 0;
-    background: var(--accent-mid);
-    min-height: 2px;
-    transition: background 0.2s;
-    position: relative;
-    cursor: pointer;
-  }
-  .bar-fill:hover { background: var(--accent); }
-  .bar-fill.active {
-    background: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-soft);
-  }
-  .bar-label {
-    font-size: 9px;
-    color: var(--muted);
-    margin-top: 4px;
-    white-space: nowrap;
-    height: 12px;
-    line-height: 12px;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-  }
-  .chart-detail {
-    margin-top: 10px;
-    min-height: 18px;
-    font-size: 12px;
-    color: var(--ink-2);
-  }
+.btn-row { display: flex; gap: 12px; }
 
-  /* ── Toast ── */
-  .toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
-  .toast {
-    background: var(--ink); color: #fff;
-    padding: 10px 16px; border-radius: 6px;
-    font-size: 13px; box-shadow: var(--shadow-md);
-    animation: slideIn 0.2s ease;
-    max-width: 320px;
-  }
-  .toast.success { background: var(--green); }
-  .toast.error { background: var(--red); }
-  .toast.warning { background: #8a6d0b; }
-  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+/* PC section title */
+.section-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
 
-  /* ── Tooltip ── */
-  [data-tip]:hover::after {
-    content: attr(data-tip);
-    position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
-    background: var(--ink); color: #fff;
-    padding: 4px 8px; border-radius: 4px;
-    font-size: 11px; white-space: nowrap; z-index: 99;
-    pointer-events: none;
-  }
+/* PC record list */
+.record-list { display: flex; flex-direction: column; gap: 8px; }
+.record-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border-light); font-size: 13px; }
+.record-time { color: var(--muted); min-width: 120px; font-variant-numeric: tabular-nums; }
+.record-duration { font-weight: 600; min-width: 54px; }
+.record-note { flex: 1; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.btn-edit, .btn-del { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px 6px; border-radius: 4px; font-size: 12px; transition: all 0.15s; font-family: inherit; }
+.btn-edit:hover { background: var(--accent-soft); color: var(--accent); }
+.btn-del:hover { background: var(--red-soft); color: var(--red); }
 
-  .empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
-  .divider { height: 1px; background: var(--border-light); margin: 20px 0; }
+/* PC toolbar */
+.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar input, .toolbar select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--ink); background: var(--surface); outline: none; font-family: inherit; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
 
-  /* ── Year selector ── */
-  .year-sel-row {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
-  }
-  .year-btn {
-    background: none; border: 1px solid var(--border);
-    border-radius: 6px; padding: 4px 10px;
-    cursor: pointer; font-size: 13px; color: var(--ink);
-    transition: all 0.15s;
-  }
-  .year-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .year-display { font-size: 15px; font-weight: 600; min-width: 54px; text-align: center; }
+/* PC table */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid var(--border-light); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg); }
+tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
+.td-muted { color: var(--muted); }
+.td-mono { font-variant-numeric: tabular-nums; }
 
-  /* ── Responsive ── */
-  @media (max-width: 600px) {
-    .stats-cards { grid-template-columns: repeat(2, 1fr); }
-    .stats-summary { grid-template-columns: 1fr; }
-    .field-row { grid-template-columns: 1fr; }
-    .modal-row { grid-template-columns: 1fr; }
-    .bar-label { font-size: 8px; }
-    .app-body { padding: 16px 14px 60px; }
-    .timer-display { font-size: 34px; }
-    .field-inline { align-items:stretch; }
-    .field-inline .inline-actions { width: 100%; }
-    .field-inline .inline-actions .btn { width: 100%; }
+/* PC Stats */
+.pc-stats-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.pc-stats-summary { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 16px; }
+.summary-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s; }
+.summary-item:hover { border-color: var(--accent-mid); transform: translateY(-1px); }
+.summary-item.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.summary-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.summary-item-name { font-size: 13px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-item-time { font-size: 16px; font-weight: 700; color: var(--accent); }
+.summary-item-meta { font-size: 11px; color: var(--muted); }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.stat-card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.stat-card-value { font-size: 22px; font-weight: 700; color: var(--ink); }
+.stat-card-unit { font-size: 13px; font-weight: 400; color: var(--muted); }
+.stats-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.year-sel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.year-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink); transition: all 0.15s; }
+.year-btn:hover { border-color: var(--accent); color: var(--accent); }
+.year-display { font-size: 15px; font-weight: 600; min-width: 54px; text-align: center; }
+
+.chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 16px; }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 16px; }
+.pc-bar-chart { height: 120px; }
+.heatmap-scroll { overflow-x: auto; }
+.heatmap { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
+.heatmap-row { display: flex; align-items: center; gap: 8px; }
+.heatmap-month-tag { width: 34px; flex: 0 0 34px; font-size: 11px; color: var(--muted); text-align: right; }
+.heatmap-days { display: flex; gap: 3px; }
+.heatmap-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 8px; justify-content: flex-end; }
+.legend-cell { width: 12px; height: 12px; border-radius: 2px; }
+
+/* PC Modal */
+.pc-modal { background: var(--surface); border-radius: 10px; width: 100%; max-width: 480px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); overflow: hidden; }
+.modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 15px; font-weight: 600; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px; border-radius: 4px; }
+.modal-close:hover { color: var(--ink); }
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* PC Manager */
+.manager-list { display: flex; flex-direction: column; gap: 10px; }
+.manager-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.manager-actions { display: flex; gap: 6px; }
+.manager-actions button { background: var(--bg); border: 1px solid var(--border); color: var(--ink-2); border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
+.manager-actions button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* PC Toast */
+.pc-toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+
+/* PC Empty */
+.empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+
+/* Voice btn PC */
+.voice-btn-pc {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 6px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--ink-2); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.2s;
+}
+.voice-btn-pc:hover { border-color: var(--accent); color: var(--accent); }
+.voice-btn-pc.recording { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+
+/* ════════════════════════════════════
+   ██████  MOBILE LAYOUT  (< 768px)
+   ════════════════════════════════════ */
+/* Hide PC elements on mobile, show mobile elements on PC */
+.mobile-only { display: none; }
+.pc-only { display: block; }
+
+@media (max-width: 767px) {
+  html, body { height: 100%; overflow: hidden; }
+  
+  .pc-only  { display: none !important; }
+  .mobile-only { display: block; }
+
+  /* ── Mobile app shell ── */
+  .mob-app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+  .mob-page-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px); }
+
+  /* ── Bottom nav ── */
+  .mob-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: calc(var(--nav-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom); padding-top: 8px;
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: flex-start; z-index: 100;
   }
+  .mob-nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 0; cursor: pointer; border: none; background: none; color: var(--muted); font-family: inherit;
+  }
+  .mob-nav-item.active { color: var(--accent); }
+  .mob-nav-icon { font-size: 20px; line-height: 1; position: relative; }
+  .mob-nav-icon::after { content:''; position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--accent); opacity:0; transition:opacity 0.2s; }
+  .mob-nav-item.active .mob-nav-icon::after { opacity: 1; }
+  .mob-nav-label { font-size: 10px; font-weight: 500; letter-spacing: 0.02em; }
+
+  /* ── Mobile pages ── */
+  .mob-page { display: none; }
+  .mob-page.active { display: block; }
+
+  /* ── Today hero ── */
+  .mob-hero { padding: 24px 16px 16px; background: linear-gradient(180deg, rgba(58,110,168,0.05) 0%, transparent 100%); }
+  .mob-date { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; font-family: 'DM Mono', monospace; margin-bottom: 16px; }
+
+  .mob-stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 20px; }
+  .mob-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 10px; text-align: center; }
+  .mob-stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 4px; }
+  .mob-stat-val { font-size: 20px; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; line-height: 1; }
+  .mob-stat-unit { font-size: 11px; font-weight: 400; color: var(--ink-2); }
+
+  /* ── Mobile timer card ── */
+  .mob-timer-card { margin: 0 12px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .mob-timer-inner { padding: 20px 16px 16px; }
+  .mob-status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .mob-status-text { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mob-timer-display { font-family: 'DM Mono', monospace; font-size: 48px; font-weight: 500; color: var(--muted); letter-spacing: 0.02em; line-height: 1; margin-bottom: 20px; transition: color 0.3s; }
+  .mob-timer-display.running { color: var(--accent); }
+
+  .mob-field-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .mob-field-wrap { display: flex; flex-direction: column; gap: 5px; }
+  .mob-field-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'DM Mono', monospace; }
+  .mob-field-row { display: flex; gap: 8px; align-items: center; }
+  .mob-field-row .field-input, .mob-field-row .field-select { flex: 1; padding: 11px 12px; background: var(--surface2); font-size: 14px; }
+  .mob-field-row .field-input { background: var(--surface2); }
+  .mob-edit-btn { flex-shrink: 0; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--ink-2); font-size: 12px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .mob-cta-row { display: flex; gap: 10px; }
+  .mob-btn-cta { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: transform 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .mob-btn-cta:active { transform: scale(0.97); }
+  .mob-btn-start { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(58,110,168,0.3); }
+  .mob-btn-stop { background: var(--red-soft); color: var(--red); border: 1px solid #f5c6c2; }
+
+  /* ── Mobile recent ── */
+  .mob-section-hd { padding: 0 16px 10px; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+  .mob-record-list { padding: 0 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mob-record-card { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .mob-rec-info { flex: 1; min-width: 0; }
+  .mob-rec-dur { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .mob-rec-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .mob-rec-title { font-size: 12px; color: var(--ink-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mob-rec-edit { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; color: var(--muted); font-size: 12px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+
+  /* ── Mobile page header ── */
+  .mob-page-hd { padding: 22px 16px 14px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* ── Mobile log ── */
+  .mob-toolbar { padding: 0 12px 12px; display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mob-toolbar::-webkit-scrollbar { display: none; }
+  .mob-chip { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); font-size: 13px; cursor: pointer; font-family: inherit; appearance: none; outline: none; }
+  .mob-chip:focus { border-color: var(--accent); }
+  input.mob-chip { color: var(--ink-2); }
+  .mob-action-chips { padding: 0 12px 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .mob-action-chip { padding: 8px 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); font-size: 12px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .mob-action-chip.prim { background: var(--accent-soft); border-color: var(--accent-mid); color: var(--accent); }
+  .mob-log-list { padding: 0 12px; display: flex; flex-direction: column; gap: 6px; }
+  .mob-log-item { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .mob-log-date { flex-shrink: 0; text-align: center; min-width: 28px; }
+  .mob-log-day { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .mob-log-mon { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mob-log-detail { flex: 1; min-width: 0; }
+  .mob-log-times { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .mob-log-article { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mob-log-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .mob-log-dur { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--ink); }
+  .mob-log-btns { display: flex; gap: 4px; }
+  .mob-log-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--muted); cursor: pointer; font-family: inherit; }
+
+  /* ── Mobile stats ── */
+  .mob-stats-hero { padding: 22px 16px 0; }
+  .mob-year-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .mob-year-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mob-year-val { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; flex: 1; text-align: center; }
+  .mob-sc-cards { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 16px; }
+  .mob-sc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .mob-sc-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+  .mob-sc-val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .mob-sc-unit { font-size: 12px; color: var(--ink-2); font-weight: 400; }
+  .mob-stats-section { padding: 0 16px 20px; }
+  .mob-stats-section-title { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+  .mob-cat-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .mob-cat-item { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .mob-cat-item.active { border-color: var(--accent); background: var(--accent-soft); }
+  .mob-cat-bar { flex: 1; }
+  .mob-cat-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 5px; }
+  .mob-cat-prog { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .mob-cat-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+  .mob-cat-count { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mob-cat-time { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--accent); flex-shrink: 0; }
+  .mob-chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .mob-chart-title { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .mob-bar-chart { height: 80px; }
+  .mob-heatmap-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mob-hm-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .mob-hm-label { width: 26px; font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; text-align: right; flex-shrink: 0; }
+  .mob-hm-days { display: flex; gap: 2px; }
+  .mob-hm-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--heat-0); }
+  .mob-hm-cell[data-l="1"] { background: var(--heat-1); }
+  .mob-hm-cell[data-l="2"] { background: var(--heat-2); }
+  .mob-hm-cell[data-l="3"] { background: var(--heat-3); }
+  .mob-hm-cell[data-l="4"] { background: var(--heat-4); }
+  .mob-hm-cell[data-future] { background: transparent; }
+  .mob-hm-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 8px; font-size: 10px; color: var(--muted); }
+  .mob-hm-leg { width: 9px; height: 9px; border-radius: 2px; }
+  .mob-filter-wrap { padding: 0 16px 12px; }
+  .mob-filter-wrap .field-select { background: var(--surface); max-width: 200px; padding: 9px 12px; }
+
+  /* ── Mobile Bottom Sheet ── */
+  .mob-sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; }
+  .mob-sheet-overlay.open { display: flex; }
+  .mob-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-height: 92dvh; overflow-y: auto; padding-bottom: calc(16px + var(--safe-bottom)); animation: sheetUp 0.3s cubic-bezier(0.34,1.4,0.64,1); }
+  @keyframes sheetUp { from{transform:translateY(100%);opacity:0.6} to{transform:translateY(0);opacity:1} }
+  .mob-sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+  .mob-sheet-header { padding: 16px 18px 0; display: flex; align-items: center; justify-content: space-between; }
+  .mob-sheet-title { font-size: 17px; font-weight: 700; }
+  .mob-sheet-close { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: none; color: var(--ink-2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mob-sheet-body { padding: 16px 18px 4px; display: flex; flex-direction: column; gap: 14px; }
+  .mob-sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mob-sheet-footer { padding: 12px 18px 0; display: flex; gap: 10px; }
+  .mob-sheet-footer .mob-btn-cta { font-size: 14px; padding: 13px; }
+  .mob-dur-preview { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; text-align: center; min-height: 18px; }
+
+  /* ── Mobile voice btn ── */
+  .mob-voice-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: 10px; background: var(--surface2); border: 1.5px dashed var(--border); color: var(--muted); font-size: 14px; font-family: inherit; cursor: pointer; transition: all 0.2s; }
+  .mob-voice-btn.recording { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); animation: voicePulse 1.5s ease-in-out infinite; }
+  @keyframes voicePulse { 0%,100%{box-shadow:0 0 0 0 rgba(58,110,168,0.15)} 50%{box-shadow:0 0 0 8px rgba(58,110,168,0)} }
+
+  /* ── Mobile manager ── */
+  .mob-mgr-list { display: flex; flex-direction: column; gap: 8px; }
+  .mob-mgr-row { display: flex; align-items: center; gap: 8px; }
+  .mob-mgr-row .field-input { flex: 1; background: var(--surface2); }
+  .mob-mgr-btns { display: flex; gap: 4px; flex-shrink: 0; }
+  .mob-mgr-btn { width: 32px; height: 32px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--ink-2); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* ── Mobile toast ── */
+  .mob-toast-wrap { position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  .mob-toast { padding: 10px 20px; border-radius: 24px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); white-space: nowrap; font-family: 'DM Mono', monospace; background: var(--ink); color: #fff; animation: toastAnim 0.25s cubic-bezier(0.34,1.4,0.64,1); }
+  .mob-toast.success { background: var(--green); }
+  .mob-toast.error { background: var(--red); }
+  
+  .mob-empty { text-align: center; padding: 36px 20px; color: var(--muted); font-size: 13px; }
+  .mob-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+}
 </style>
 </head>
 <body>
 
-<header class="app-header">
-  <div class="header-inner">
+<!-- ══════════════════════════════════════════
+     PC LAYOUT  (hidden on mobile via CSS)
+══════════════════════════════════════════ -->
+<div class="pc-only">
+
+<header class="pc-header">
+  <div class="pc-header-inner">
     <span class="app-title">活动计时</span>
-    <nav class="tabs">
-      <button class="tab-btn active" data-tab="today">今日</button>
-      <button class="tab-btn" data-tab="log">记录</button>
-      <button class="tab-btn" data-tab="stats">统计</button>
+    <nav class="pc-tabs">
+      <button class="pc-tab-btn active" data-tab="today">今日</button>
+      <button class="pc-tab-btn" data-tab="log">记录</button>
+      <button class="pc-tab-btn" data-tab="stats">统计</button>
     </nav>
   </div>
 </header>
 
-<main class="app-body">
+<main class="pc-body">
 
-  <!-- ══ TODAY ══ -->
-  <div class="tab-panel active" id="tab-today">
-    <div id="today-date-row" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
+  <!-- TODAY -->
+  <div class="pc-panel active" id="pc-tab-today">
+    <div id="pc-today-date-row" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
 
-    <div class="stats-bar" style="margin-bottom:16px;">
-      <div class="stat-cell">
-        <div class="stat-label">今日累计</div>
-        <div class="stat-value" id="today-total">—</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-label">今日次数</div>
-        <div class="stat-value" id="today-count">—<span class="stat-unit">次</span></div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-label">连续打卡</div>
-        <div class="stat-value" id="today-streak">—<span class="stat-unit">天</span></div>
-      </div>
+    <div class="pc-stats-bar">
+      <div class="stat-cell"><div class="stat-label">今日累计</div><div class="stat-value" id="pc-today-total">—</div></div>
+      <div class="stat-cell"><div class="stat-label">今日次数</div><div class="stat-value" id="pc-today-count">—</div></div>
+      <div class="stat-cell"><div class="stat-label">连续打卡</div><div class="stat-value" id="pc-today-streak">—</div></div>
     </div>
 
     <div class="card" style="margin-bottom:16px;">
       <div class="timer-panel">
-        <div class="timer-status">
-          <div class="status-dot" id="status-dot"></div>
-          <span class="status-text" id="status-text">未开始</span>
+        <div class="timer-status-row">
+          <div class="status-dot" id="pc-status-dot"></div>
+          <span class="status-text" id="pc-status-text">未开始</span>
         </div>
-        <div class="timer-display" id="timer-display">00:00:00</div>
-
+        <div class="timer-display" id="pc-timer-display">00:00:00</div>
         <div class="field-row">
           <div class="field-group">
             <label class="field-label">活动分类</label>
             <div class="field-inline">
-              <select class="field-select" id="content-note-sel"></select>
-              <div class="inline-actions">
-                <button class="btn btn-secondary" type="button" onclick="openContentTypeManager()">编辑</button>
-              </div>
+              <select class="field-select" id="pc-content-note-sel"></select>
+              <div class="inline-actions"><button class="btn btn-secondary" onclick="openContentTypeManager()">编辑</button></div>
             </div>
-            <input class="field-input" id="content-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
+            <input class="field-input" id="pc-content-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
           </div>
           <div class="field-group">
             <label class="field-label">事项名称</label>
-            <input class="field-input" id="article-title-input" placeholder="例：网球发球练习" list="article-title-options">
+            <input class="field-input" id="pc-article-title-input" placeholder="例：网球发球练习" list="article-title-options">
             <datalist id="article-title-options"></datalist>
           </div>
         </div>
-
-        <div class="btn-row" id="btn-row">
-          <button class="btn btn-start" id="btn-start" onclick="startSession()">▶ 开始计时</button>
-          <button class="btn btn-end" id="btn-end" style="display:none;" onclick="endSession()">■ 结束计时</button>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="pc-btn-start" onclick="startSession()">▶ 开始计时</button>
+          <button class="btn btn-danger" id="pc-btn-end" style="display:none;" onclick="endSession()">■ 结束计时</button>
         </div>
       </div>
     </div>
@@ -588,178 +510,312 @@
     <div class="card">
       <div class="card-body">
         <div class="section-title">最近记录</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-          数据保存在当前浏览器本地。关闭页面后通常仍会保留，但建议定期导出 CSV 备份。
-        </div>
-        <div class="record-list" id="recent-list">
-          <div class="empty">暂无记录</div>
-        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">数据保存在当前浏览器本地。建议定期导出 CSV 备份。</div>
+        <div class="record-list" id="pc-recent-list"><div class="empty">暂无记录</div></div>
       </div>
     </div>
   </div>
 
-  <!-- ══ LOG ══ -->
-  <div class="tab-panel" id="tab-log">
+  <!-- LOG -->
+  <div class="pc-panel" id="pc-tab-log">
     <div class="toolbar">
-      <input type="date" id="filter-date" placeholder="筛选日期">
-      <select id="filter-note" style="min-width:120px;">
-        <option value="">全部类型</option>
-        <option value="工作">工作</option>
-        <option value="学习">学习</option>
-        <option value="运动">运动</option>
-        <option value="创作">创作</option>
-        <option value="练习">练习</option>
-      </select>
+      <input type="date" id="pc-filter-date">
+      <select id="pc-filter-note" style="min-width:120px;"><option value="">全部类型</option></select>
       <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openAddModal()">＋ 手动补录</button>
       <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openVoiceAddModal()">🎤 语音补录</button>
       <div style="margin-left:auto;display:flex;gap:8px;">
         <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="exportCSV()">↓ 导出 CSV</button>
-        <label class="btn btn-secondary" style="flex:0;padding:7px 14px;cursor:pointer;">
-          ↑ 导入 CSV
-          <input type="file" accept=".csv" style="display:none;" onchange="importCSV(event)">
-        </label>
+        <label class="btn btn-secondary" style="flex:0;padding:7px 14px;cursor:pointer;">↑ 导入 CSV<input type="file" accept=".csv" style="display:none;" onchange="importCSV(event)"></label>
       </div>
     </div>
-
-    <div class="card">
-      <div class="card-body" style="padding:0;">
-        <table>
-          <thead>
-            <tr>
-              <th>日期</th>
-              <th>开始</th>
-              <th>结束</th>
-              <th>时长</th>
-              <th>内容</th>
-              <th>事项</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="log-tbody">
-            <tr><td colspan="7" class="empty">暂无记录</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <div class="card"><div class="card-body" style="padding:0;">
+      <table><thead><tr><th>日期</th><th>开始</th><th>结束</th><th>时长</th><th>内容</th><th>事项</th><th></th></tr></thead>
+      <tbody id="pc-log-tbody"><tr><td colspan="7" class="empty">暂无记录</td></tr></tbody></table>
+    </div></div>
   </div>
 
-  <!-- ══ STATS ══ -->
-  <div class="tab-panel" id="tab-stats">
+  <!-- STATS -->
+  <div class="pc-panel" id="pc-tab-stats">
     <div class="year-sel-row">
       <button class="year-btn" onclick="changeYear(-1)">‹</button>
-      <span class="year-display" id="stats-year-display">2026</span>
+      <span class="year-display" id="pc-stats-year-display">2026</span>
       <button class="year-btn" onclick="changeYear(1)">›</button>
     </div>
-
     <div class="stats-toolbar">
-      <select id="stats-category-filter" class="field-select" style="min-width:180px;"></select>
+      <select id="pc-stats-category-filter" class="field-select" style="min-width:180px;"></select>
     </div>
-
-    <div class="stats-cards" id="stats-cards"></div>
-
-    <div class="stats-summary" id="stats-summary"></div>
-
+    <div class="pc-stats-cards" id="pc-stats-cards"></div>
+    <div class="pc-stats-summary" id="pc-stats-summary"></div>
     <div class="chart-wrap">
-      <div class="chart-title" id="heatmap-title">全年活动热力图</div>
-      <div class="heatmap-scroll">
-        <div class="heatmap" id="heatmap"></div>
-      </div>
-      <div class="heatmap-legend">
-        少
+      <div class="chart-title" id="pc-heatmap-title">全年活动热力图</div>
+      <div class="heatmap-scroll"><div class="heatmap" id="pc-heatmap"></div></div>
+      <div class="heatmap-legend">少
         <div class="legend-cell" style="background:var(--heat-0)"></div>
         <div class="legend-cell" style="background:var(--heat-1)"></div>
         <div class="legend-cell" style="background:var(--heat-2)"></div>
         <div class="legend-cell" style="background:var(--heat-3)"></div>
-        <div class="legend-cell" style="background:var(--heat-4)"></div>
-        多
+        <div class="legend-cell" style="background:var(--heat-4)"></div>多
       </div>
     </div>
-
     <div class="chart-wrap">
-      <div class="chart-title" id="daily-chart-title">当月每日时长（小时）</div>
-      <div class="bar-chart" id="bar-chart-daily"></div>
-      <div class="chart-detail" id="daily-chart-detail">点击柱子查看具体数值</div>
+      <div class="chart-title" id="pc-daily-chart-title">当月每日时长</div>
+      <div class="bar-chart pc-bar-chart" id="pc-bar-chart-daily"></div>
+      <div class="chart-detail" id="pc-daily-chart-detail">点击柱子查看具体数值</div>
     </div>
-
     <div class="chart-wrap">
-      <div class="chart-title" id="monthly-chart-title">各月累计时长（小时）</div>
-      <div class="bar-chart" id="bar-chart-monthly"></div>
-      <div class="chart-detail" id="monthly-chart-detail">点击柱子查看具体数值</div>
+      <div class="chart-title" id="pc-monthly-chart-title">各月累计时长</div>
+      <div class="bar-chart pc-bar-chart" id="pc-bar-chart-monthly"></div>
+      <div class="chart-detail" id="pc-monthly-chart-detail">点击柱子查看具体数值</div>
     </div>
   </div>
 
 </main>
 
-<!-- Add/Edit Modal -->
-<div class="modal-overlay" id="add-modal">
-  <div class="modal">
+<!-- PC Add/Edit Modal -->
+<div class="overlay" id="pc-add-modal">
+  <div class="pc-modal">
     <div class="modal-header">
-      <span class="modal-title" id="modal-title">手动补录记录</span>
+      <span class="modal-title" id="pc-modal-title">手动补录记录</span>
       <button class="modal-close" onclick="closeAddModal()">×</button>
     </div>
     <div class="modal-body">
-      <div class="voice-status" id="voice-status"></div>
-      <div class="field-group">
-        <label class="field-label">日期 *</label>
-        <input type="date" class="field-input" id="m-date">
-      </div>
+      <div class="voice-status" id="pc-voice-status"></div>
+      <button class="voice-btn-pc" id="pc-voice-btn" onclick="startVoiceFill()">🎤 <span id="pc-voice-btn-text">点击语音录入</span></button>
+      <div class="field-group"><label class="field-label">日期 *</label><input type="date" class="field-input" id="m-date"></div>
       <div class="modal-row">
-        <div class="field-group">
-          <label class="field-label">开始时间 *</label>
-          <input type="time" step="1" class="field-input" id="m-start">
-        </div>
-        <div class="field-group">
-          <label class="field-label">结束时间 *</label>
-          <input type="time" step="1" class="field-input" id="m-end">
-        </div>
+        <div class="field-group"><label class="field-label">开始时间 *</label><input type="time" step="1" class="field-input" id="m-start"></div>
+        <div class="field-group"><label class="field-label">结束时间 *</label><input type="time" step="1" class="field-input" id="m-end"></div>
       </div>
       <div class="modal-row">
         <div class="field-group">
           <label class="field-label">活动分类</label>
           <div class="field-inline">
             <select class="field-select" id="m-note-sel"></select>
-            <div class="inline-actions">
-              <button class="btn btn-secondary" type="button" onclick="openContentTypeManager()">编辑</button>
-            </div>
+            <div class="inline-actions"><button class="btn btn-secondary" onclick="openContentTypeManager()">编辑</button></div>
           </div>
           <input class="field-input" id="m-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
         </div>
-        <div class="field-group">
-          <label class="field-label">事项名称</label>
-          <input type="text" class="field-input" id="m-article" list="article-title-options">
-        </div>
+        <div class="field-group"><label class="field-label">事项名称</label><input type="text" class="field-input" id="m-article" list="article-title-options"></div>
       </div>
       <div id="m-duration-preview" style="font-size:12px;color:var(--muted);"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeAddModal()">取消</button>
-      <button class="btn btn-start" style="flex:0;padding:9px 18px;" id="modal-save-btn" onclick="saveManualRecord()">保存</button>
+      <button class="btn btn-primary" style="flex:0;padding:9px 18px;" id="modal-save-btn" onclick="saveManualRecord()">保存</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="content-type-modal">
-  <div class="modal">
+<!-- PC Content Type Modal -->
+<div class="overlay" id="pc-content-type-modal">
+  <div class="pc-modal">
     <div class="modal-header">
       <span class="modal-title">管理活动分类</span>
       <button class="modal-close" onclick="closeContentTypeManager()">×</button>
     </div>
     <div class="modal-body">
-      <div style="font-size:12px;color:var(--muted);">这里的顺序会同步到所有下拉框，并保存在当前浏览器本地。</div>
-      <div class="manager-list" id="content-type-list"></div>
-      <button class="btn btn-secondary" type="button" style="flex:0;width:max-content;" onclick="addContentTypeRow()">＋ 新增一个类型</button>
+      <div style="font-size:12px;color:var(--muted);">顺序会同步到所有下拉框，保存在当前浏览器本地。</div>
+      <div class="manager-list" id="pc-content-type-list"></div>
+      <button class="btn btn-secondary" style="flex:0;width:max-content;" onclick="addContentTypeRow()">＋ 新增类型</button>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeContentTypeManager()">取消</button>
-      <button class="btn btn-start" style="flex:0;padding:9px 18px;" onclick="saveContentTypeManager()">保存</button>
+      <button class="btn btn-primary" style="flex:0;padding:9px 18px;" onclick="saveContentTypeManager()">保存</button>
     </div>
   </div>
 </div>
 
-<!-- Toast container -->
-<div class="toast-wrap" id="toast-wrap"></div>
+<div class="pc-toast-wrap" id="pc-toast-wrap"></div>
+
+</div><!-- /pc-only -->
+
+
+<!-- ══════════════════════════════════════════
+     MOBILE LAYOUT  (hidden on PC via CSS)
+══════════════════════════════════════════ -->
+<div class="mobile-only">
+<div class="mob-app">
+  <div class="mob-page-wrap">
+
+    <!-- TODAY -->
+    <div class="mob-page active" id="mob-page-today">
+      <div class="mob-hero">
+        <div class="mob-date" id="mob-today-date"></div>
+        <div class="mob-stats-row">
+          <div class="mob-stat"><div class="mob-stat-label">今日</div><div class="mob-stat-val" id="mob-today-total">0<span class="mob-stat-unit">m</span></div></div>
+          <div class="mob-stat"><div class="mob-stat-label">次数</div><div class="mob-stat-val" id="mob-today-count">0<span class="mob-stat-unit">次</span></div></div>
+          <div class="mob-stat"><div class="mob-stat-label">连续</div><div class="mob-stat-val" id="mob-today-streak">0<span class="mob-stat-unit">天</span></div></div>
+        </div>
+      </div>
+
+      <div class="mob-timer-card">
+        <div class="mob-timer-inner">
+          <div class="mob-status-row">
+            <div class="status-dot" id="mob-status-dot"></div>
+            <span class="mob-status-text" id="mob-status-text">未开始</span>
+          </div>
+          <div class="mob-timer-display" id="mob-timer-display">00:00:00</div>
+          <div class="mob-field-stack">
+            <div class="mob-field-wrap">
+              <div class="mob-field-lbl">活动分类</div>
+              <div class="mob-field-row">
+                <select class="field-select" id="mob-content-note-sel" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;"></select>
+                <button class="mob-edit-btn" onclick="openContentTypeManager()">编辑</button>
+              </div>
+              <input class="field-input" id="mob-content-note-input" placeholder="输入自定义分类" style="display:none;margin-top:8px;background:var(--surface2);padding:11px 12px;font-size:14px;">
+            </div>
+            <div class="mob-field-wrap">
+              <div class="mob-field-lbl">事项名称</div>
+              <input class="field-input" id="mob-article-title-input" placeholder="例：网球发球练习" list="article-title-options" style="background:var(--surface2);padding:11px 12px;font-size:14px;">
+            </div>
+          </div>
+          <div class="mob-cta-row">
+            <button class="mob-btn-cta mob-btn-start" id="mob-btn-start" onclick="startSession()">▶ 开始计时</button>
+            <button class="mob-btn-cta mob-btn-stop" id="mob-btn-end" style="display:none;" onclick="endSession()">■ 结束</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:14px;"></div>
+      <div class="mob-section-hd">最近记录</div>
+      <div class="mob-record-list" id="mob-recent-list">
+        <div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;padding:10px 20px;">数据保存在浏览器本地，建议定期导出 CSV 备份</div>
+    </div>
+
+    <!-- LOG -->
+    <div class="mob-page" id="mob-page-log">
+      <div class="mob-page-hd">记录</div>
+      <div class="mob-toolbar">
+        <input type="date" class="mob-chip" id="mob-filter-date">
+        <select class="mob-chip" id="mob-filter-note"><option value="">全部类型</option></select>
+      </div>
+      <div class="mob-action-chips">
+        <button class="mob-action-chip prim" onclick="openAddModal()">＋ 手动补录</button>
+        <button class="mob-action-chip prim" onclick="openVoiceAddModal()">🎤 语音补录</button>
+        <button class="mob-action-chip" onclick="exportCSV()">↓ 导出 CSV</button>
+        <label class="mob-action-chip" style="cursor:pointer;">↑ 导入 CSV<input type="file" accept=".csv" style="display:none;" onchange="importCSV(event)"></label>
+      </div>
+      <div class="mob-log-list" id="mob-log-list">
+        <div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="mob-page" id="mob-page-stats">
+      <div class="mob-stats-hero">
+        <div class="mob-year-nav">
+          <button class="mob-year-btn" onclick="changeYear(-1)">‹</button>
+          <div class="mob-year-val" id="mob-stats-year-display">2026</div>
+          <button class="mob-year-btn" onclick="changeYear(1)">›</button>
+        </div>
+        <div class="mob-sc-cards" id="mob-stats-cards"></div>
+      </div>
+      <div class="mob-filter-wrap">
+        <select class="field-select" id="mob-stats-category-filter"><option value="">全部分类</option></select>
+      </div>
+      <div class="mob-stats-section">
+        <div class="mob-stats-section-title">分类时长</div>
+        <div class="mob-cat-list" id="mob-cat-list"></div>
+        <div class="mob-stats-section-title" id="mob-heatmap-title">全年热力图</div>
+        <div class="mob-heatmap-wrap"><div id="mob-heatmap" style="min-width:max-content;"></div>
+          <div class="mob-hm-legend">少
+            <div class="mob-hm-leg" style="background:var(--heat-0)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-1)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-2)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-4)"></div>多
+          </div>
+        </div>
+        <div class="mob-chart-wrap">
+          <div class="mob-chart-title" id="mob-daily-chart-title">当月每日时长</div>
+          <div class="bar-chart mob-bar-chart" id="mob-bar-chart-daily"></div>
+          <div class="chart-detail" id="mob-daily-chart-detail">点击查看数值</div>
+        </div>
+        <div class="mob-chart-wrap">
+          <div class="mob-chart-title" id="mob-monthly-chart-title">各月累计时长</div>
+          <div class="bar-chart mob-bar-chart" id="mob-bar-chart-monthly"></div>
+          <div class="chart-detail" id="mob-monthly-chart-detail">点击查看数值</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- mob-page-wrap -->
+
+  <nav class="mob-nav">
+    <button class="mob-nav-item active" onclick="mobSwitchPage('today',this)"><div class="mob-nav-icon">⏱</div><div class="mob-nav-label">今日</div></button>
+    <button class="mob-nav-item" onclick="mobSwitchPage('log',this)"><div class="mob-nav-icon">📋</div><div class="mob-nav-label">记录</div></button>
+    <button class="mob-nav-item" onclick="mobSwitchPage('stats',this)"><div class="mob-nav-icon">📊</div><div class="mob-nav-label">统计</div></button>
+  </nav>
+</div><!-- mob-app -->
+
+<!-- Mobile Add/Edit Sheet -->
+<div class="mob-sheet-overlay" id="mob-add-modal" onclick="if(event.target===this)closeAddModal()">
+  <div class="mob-sheet">
+    <div class="mob-sheet-handle"></div>
+    <div class="mob-sheet-header">
+      <span class="mob-sheet-title" id="mob-modal-title">手动补录</span>
+      <button class="mob-sheet-close" onclick="closeAddModal()">×</button>
+    </div>
+    <div class="mob-sheet-body">
+      <div class="voice-status" id="mob-voice-status"></div>
+      <button class="mob-voice-btn" id="mob-voice-btn" onclick="startVoiceFill()">
+        <span id="mob-voice-btn-icon">🎤</span><span id="mob-voice-btn-text">点击开始语音录入</span>
+      </button>
+      <div class="mob-field-wrap"><div class="mob-field-lbl">日期 *</div><input type="date" class="field-input" id="m-date" style="background:var(--surface2);"></div>
+      <div class="mob-sheet-row">
+        <div class="mob-field-wrap"><div class="mob-field-lbl">开始时间 *</div><input type="time" step="1" class="field-input" id="m-start" style="background:var(--surface2);"></div>
+        <div class="mob-field-wrap"><div class="mob-field-lbl">结束时间 *</div><input type="time" step="1" class="field-input" id="m-end" style="background:var(--surface2);"></div>
+      </div>
+      <div class="mob-dur-preview" id="m-duration-preview"></div>
+      <div class="mob-field-wrap">
+        <div class="mob-field-lbl">活动分类</div>
+        <div class="mob-field-row">
+          <select class="field-select" id="m-note-sel" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;"></select>
+          <button class="mob-edit-btn" onclick="openContentTypeManager()">编辑</button>
+        </div>
+        <input class="field-input" id="m-note-input" placeholder="输入活动分类" style="display:none;margin-top:8px;background:var(--surface2);">
+      </div>
+      <div class="mob-field-wrap"><div class="mob-field-lbl">事项名称</div><input type="text" class="field-input" id="m-article" list="article-title-options" placeholder="可选" style="background:var(--surface2);padding:11px 12px;font-size:14px;"></div>
+    </div>
+    <div class="mob-sheet-footer">
+      <button class="mob-btn-cta mob-btn-stop" style="flex:0;padding:12px 18px;" onclick="closeAddModal()">取消</button>
+      <button class="mob-btn-cta mob-btn-start" id="mob-modal-save-btn" onclick="saveManualRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Content Type Sheet -->
+<div class="mob-sheet-overlay" id="mob-content-type-modal" onclick="if(event.target===this)closeContentTypeManager()">
+  <div class="mob-sheet">
+    <div class="mob-sheet-handle"></div>
+    <div class="mob-sheet-header">
+      <span class="mob-sheet-title">管理活动分类</span>
+      <button class="mob-sheet-close" onclick="closeContentTypeManager()">×</button>
+    </div>
+    <div class="mob-sheet-body">
+      <div style="font-size:12px;color:var(--muted);">顺序同步到所有下拉框，保存在当前浏览器本地。</div>
+      <div class="mob-mgr-list" id="mob-content-type-list"></div>
+      <button class="mob-action-chip" onclick="addContentTypeRow()" style="align-self:flex-start;">＋ 新增类型</button>
+    </div>
+    <div class="mob-sheet-footer">
+      <button class="mob-btn-cta mob-btn-stop" style="flex:0;padding:12px 18px;" onclick="closeContentTypeManager()">取消</button>
+      <button class="mob-btn-cta mob-btn-start" onclick="saveContentTypeManager()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="mob-toast-wrap" id="mob-toast-wrap"></div>
+
+</div><!-- /mobile-only -->
+
 
 <script>
+// ════════════════════════════════════════════════════════
+// DEVICE DETECTION
+// ════════════════════════════════════════════════════════
+const isMobile = () => window.innerWidth < 768;
+
 // ════════════════════════════════════════════════════════
 // CONSTANTS & STATE
 // ════════════════════════════════════════════════════════
@@ -771,1191 +827,548 @@ const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习'];
 const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
 
 let timerInterval = null;
-let statsYear = null; // set on init to latest data year
+let statsYear = null;
 let editingRecordId = null;
 let recognition = null;
 let recognitionActive = false;
 let statsCategoryFilter = '';
 
 // ════════════════════════════════════════════════════════
-// STORAGE HELPERS
+// STORAGE
 // ════════════════════════════════════════════════════════
-function getSessions() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-  catch { return []; }
+function getSessions(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}}
+function saveSessions(a){localStorage.setItem(STORAGE_KEY,JSON.stringify(a))}
+function getActive(){try{return JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null')}catch{return null}}
+function saveActive(o){if(o)localStorage.setItem(ACTIVE_KEY,JSON.stringify(o));else localStorage.removeItem(ACTIVE_KEY)}
+function normalizeCategoryValue(v){const t=String(v||'').trim();return LEGACY_ENGLISH_CATEGORIES.includes(t)?'英语学习':t}
+function normalizeDateValue(v){const t=String(v||'').trim();if(!t)return'';const n=t.replace(/[./]/g,'-').replace(/年/g,'-').replace(/月/g,'-').replace(/日/g,'').replace(/\s+/g,'');const m=n.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(!m)return t;return`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`}
+function getContentTypeOptions(){try{const s=JSON.parse(localStorage.getItem(CONTENT_TYPE_KEY)||'null');if(Array.isArray(s)){const c=s.map(v=>normalizeCategoryValue(v)).filter(Boolean);if(c.length)return[...new Set(c)]}}catch{}return[...DEFAULT_CONTENT_NOTE_OPTIONS]}
+function saveContentTypeOptions(a){const c=[...new Set(a.map(v=>normalizeCategoryValue(v)).filter(Boolean))];localStorage.setItem(CONTENT_TYPE_KEY,JSON.stringify(c.length?c:DEFAULT_CONTENT_NOTE_OPTIONS))}
+function ensureContentTypeExists(v){const t=normalizeCategoryValue(v);if(!t)return;const o=getContentTypeOptions();if(!o.includes(t)){o.push(t);saveContentTypeOptions(o)}}
+function getArticleTitles(){try{const s=JSON.parse(localStorage.getItem(ARTICLE_TITLES_KEY)||'[]');if(Array.isArray(s))return[...new Set(s.map(v=>String(v||'').trim()).filter(Boolean))]}catch{}return[]}
+function rememberArticleTitle(v){const t=String(v||'').trim();if(!t)return;const a=getArticleTitles().filter(i=>i!==t);a.unshift(t);localStorage.setItem(ARTICLE_TITLES_KEY,JSON.stringify(a.slice(0,100)))}
+
+// ════════════════════════════════════════════════════════
+// DATE / TIME
+// ════════════════════════════════════════════════════════
+function localDateStr(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function localTimeStr(d=new Date()){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')}
+function timeStrToDate(ds,ts){return new Date(normalizeDateValue(ds)+'T'+ts)}
+function diffMinutesFloor(s,e){return Math.floor((e-s)/60000)}
+function fmtMinutes(m){if(!m&&m!==0)return'—';const h=Math.floor(m/60),mm=m%60;return h>0?`${h}h ${mm}m`:`${mm}m`}
+function fmtHours(m,d=1){return`${((Number(m)||0)/60).toFixed(d)}h`}
+function fmtElapsed(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0')}
+function todayStr(){return localDateStr()}
+function uid(){if(crypto.randomUUID)return crypto.randomUUID().replace(/-/g,'').slice(0,12);return Math.random().toString(36).slice(2,10)+Date.now().toString(36)}
+function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function toFullTime(v){if(!v)return'';return v.length===5?v+':00':v}
+function toInputTime(v){return v?v.slice(0,5):''}
+
+// ════════════════════════════════════════════════════════
+// UI HELPERS — dual target (PC + mobile selectors)
+// ════════════════════════════════════════════════════════
+function $id(id){return document.getElementById(id)}
+function renderContentTypeSelect(selectId,label='请选择',empty='',keep=''){
+  const sel=$id(selectId);if(!sel)return;
+  const cur=keep||sel.value,opts=getContentTypeOptions();
+  sel.innerHTML=`<option value="${escapeHtml(empty)}">${escapeHtml(label)}</option>`+opts.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')+'<option value="__custom__">自定义…</option>';
+  if(cur&&(opts.includes(cur)||cur==='__custom__'||cur===empty))sel.value=cur;
+  else if(cur)sel.value='__custom__';
+  else sel.value=empty;
 }
-function saveSessions(arr) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-}
-function getActive() {
-  try { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); }
-  catch { return null; }
-}
-function saveActive(obj) {
-  if (obj) localStorage.setItem(ACTIVE_KEY, JSON.stringify(obj));
-  else localStorage.removeItem(ACTIVE_KEY);
-}
-function normalizeCategoryValue(value) {
-  const text = String(value || '').trim();
-  return LEGACY_ENGLISH_CATEGORIES.includes(text) ? '英语学习' : text;
-}
-function normalizeDateValue(value) {
-  const text = String(value || '').trim();
-  if (!text) return '';
-  const normalized = text
-    .replace(/[./]/g, '-')
-    .replace(/年/g, '-')
-    .replace(/月/g, '-')
-    .replace(/日/g, '')
-    .replace(/\s+/g, '');
-  const match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (!match) return text;
-  return `${match[1]}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`;
-}
-function getContentTypeOptions() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(CONTENT_TYPE_KEY) || 'null');
-    if (Array.isArray(stored)) {
-      const cleaned = stored.map(v => normalizeCategoryValue(v)).filter(Boolean);
-      if (cleaned.length) return [...new Set(cleaned)];
-    }
-  } catch {}
-  return [...DEFAULT_CONTENT_NOTE_OPTIONS];
-}
-function saveContentTypeOptions(arr) {
-  const cleaned = [...new Set(arr.map(v => normalizeCategoryValue(v)).filter(Boolean))];
-  localStorage.setItem(CONTENT_TYPE_KEY, JSON.stringify(cleaned.length ? cleaned : DEFAULT_CONTENT_NOTE_OPTIONS));
-}
-function ensureContentTypeExists(value) {
-  const text = normalizeCategoryValue(value);
-  if (!text) return;
-  const options = getContentTypeOptions();
-  if (!options.includes(text)) {
-    options.push(text);
-    saveContentTypeOptions(options);
-  }
-}
-function getArticleTitles() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(ARTICLE_TITLES_KEY) || '[]');
-    if (Array.isArray(stored)) return [...new Set(stored.map(v => String(v || '').trim()).filter(Boolean))];
-  } catch {}
-  return [];
-}
-function rememberArticleTitle(value) {
-  const text = String(value || '').trim();
-  if (!text) return;
-  const titles = getArticleTitles().filter(item => item !== text);
-  titles.unshift(text);
-  localStorage.setItem(ARTICLE_TITLES_KEY, JSON.stringify(titles.slice(0, 100)));
-}
-function hydratePreferencesFromSessions() {
-  const sessions = getSessions();
-  const migratedSessions = sessions.map(session => ({
-    ...session,
-    date: normalizeDateValue(session.date),
-    content_note: normalizeCategoryValue(session.content_note)
-  }));
-  if (JSON.stringify(migratedSessions) !== JSON.stringify(sessions)) {
-    saveSessions(migratedSessions);
-  }
-  const active = getActive();
-  if (active) {
-    const migratedActive = {
-      ...active,
-      date: normalizeDateValue(active.date),
-      content_note: normalizeCategoryValue(active.content_note)
-    };
-    if (JSON.stringify(migratedActive) !== JSON.stringify(active)) saveActive(migratedActive);
-  }
-  const mergedTypes = [...DEFAULT_CONTENT_NOTE_OPTIONS];
-  const mergedTitles = getArticleTitles();
-  migratedSessions.forEach(session => {
-    const note = normalizeCategoryValue(session.content_note);
-    const article = String(session.article_title || '').trim();
-    if (note && !mergedTypes.includes(note)) mergedTypes.push(note);
-    if (article && !mergedTitles.includes(article)) mergedTitles.push(article);
+function refreshContentTypeUI(){
+  renderContentTypeSelect('pc-content-note-sel','请选择或输入');
+  renderContentTypeSelect('mob-content-note-sel','请选择或输入');
+  renderContentTypeSelect('m-note-sel','请选择');
+  ['pc-filter-note','mob-filter-note'].forEach(id=>{
+    const el=$id(id);if(!el)return;const cur=el.value;
+    el.innerHTML='<option value="">全部类型</option>'+getContentTypeOptions().map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    if(cur&&getContentTypeOptions().includes(cur))el.value=cur;
   });
-  saveContentTypeOptions(mergedTypes);
-  localStorage.setItem(ARTICLE_TITLES_KEY, JSON.stringify(mergedTitles.slice(0, 100)));
+  ['pc-stats-category-filter','mob-stats-category-filter'].forEach(id=>{
+    const el=$id(id);if(!el)return;
+    const kv=getContentTypeOptions().includes(statsCategoryFilter)?statsCategoryFilter:'';
+    el.innerHTML='<option value="">全部分类</option>'+getContentTypeOptions().map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    el.value=kv;statsCategoryFilter=kv;
+  });
+}
+function refreshArticleTitleUI(){
+  $id('article-title-options').innerHTML=getArticleTitles().map(t=>`<option value="${escapeHtml(t)}"></option>`).join('');
+}
+function hydratePreferencesFromSessions(){
+  const sessions=getSessions();
+  const migrated=sessions.map(s=>({...s,date:normalizeDateValue(s.date),content_note:normalizeCategoryValue(s.content_note)}));
+  if(JSON.stringify(migrated)!==JSON.stringify(sessions))saveSessions(migrated);
+  const active=getActive();
+  if(active){const ma={...active,date:normalizeDateValue(active.date),content_note:normalizeCategoryValue(active.content_note)};if(JSON.stringify(ma)!==JSON.stringify(active))saveActive(ma)}
+  const mt=[...DEFAULT_CONTENT_NOTE_OPTIONS],titles=getArticleTitles();
+  migrated.forEach(s=>{const n=normalizeCategoryValue(s.content_note);const a=String(s.article_title||'').trim();if(n&&!mt.includes(n))mt.push(n);if(a&&!titles.includes(a))titles.push(a)});
+  saveContentTypeOptions(mt);localStorage.setItem(ARTICLE_TITLES_KEY,JSON.stringify(titles.slice(0,100)));
 }
 
 // ════════════════════════════════════════════════════════
-// DATE / TIME HELPERS  (all local time, matching CSV)
+// NAVIGATION
 // ════════════════════════════════════════════════════════
-function localDateStr(d = new Date()) {
-  return d.getFullYear() + '-' +
-    String(d.getMonth()+1).padStart(2,'0') + '-' +
-    String(d.getDate()).padStart(2,'0');
-}
-function localTimeStr(d = new Date()) {
-  return String(d.getHours()).padStart(2,'0') + ':' +
-    String(d.getMinutes()).padStart(2,'0') + ':' +
-    String(d.getSeconds()).padStart(2,'0');
-}
-function timeStrToDate(dateStr, timeStr) {
-  // dateStr: "2026-04-09", timeStr: "16:33:09"
-  return new Date(normalizeDateValue(dateStr) + 'T' + timeStr);
-}
-function diffMinutesFloor(start, end) {
-  // matches Python int(float(...)) = floor
-  return Math.floor((end - start) / 60000);
-}
-function fmtMinutes(m) {
-  if (!m && m !== 0) return '—';
-  const h = Math.floor(m / 60), mm = m % 60;
-  if (h > 0) return `${h}h ${mm}m`;
-  return `${mm}m`;
-}
-function fmtHours(minutes, digits = 1) {
-  const hours = (Number(minutes) || 0) / 60;
-  return `${hours.toFixed(digits)}h`;
-}
-function fmtElapsed(ms) {
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
-  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(ss).padStart(2,'0');
-}
-function todayStr() { return localDateStr(); }
-function uid() {
-  if (crypto.randomUUID) return crypto.randomUUID().replace(/-/g,'').slice(0,12);
-  return Math.random().toString(36).slice(2,10) + Date.now().toString(36);
-}
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-function toFullTime(value) {
-  if (!value) return '';
-  return value.length === 5 ? value + ':00' : value;
-}
-function toInputTime(value) {
-  return value ? value.slice(0, 5) : '';
-}
-function renderContentTypeSelect(selectId, includeEmptyLabel = '请选择', emptyValue = '', keepValue = '') {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  const current = keepValue || sel.value;
-  const options = getContentTypeOptions();
-  sel.innerHTML =
-    `<option value="${escapeHtml(emptyValue)}">${escapeHtml(includeEmptyLabel)}</option>` +
-    options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('') +
-    '<option value="__custom__">自定义…</option>';
-  if (current && (options.includes(current) || current === '__custom__' || current === emptyValue)) {
-    sel.value = current;
-  } else if (current) {
-    sel.value = '__custom__';
-  } else {
-    sel.value = emptyValue;
-  }
-}
-function refreshContentTypeUI() {
-  renderContentTypeSelect('content-note-sel', '请选择或输入');
-  renderContentTypeSelect('m-note-sel', '请选择');
-  const filter = document.getElementById('filter-note');
-  const current = filter.value;
-  filter.innerHTML = '<option value="">全部类型</option>' +
-    getContentTypeOptions().map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
-  if (current && getContentTypeOptions().includes(current)) filter.value = current;
-  const statsFilter = document.getElementById('stats-category-filter');
-  if (statsFilter) {
-    const keepValue = getContentTypeOptions().includes(statsCategoryFilter) ? statsCategoryFilter : '';
-    statsFilter.innerHTML = '<option value="">全部分类</option>' +
-      getContentTypeOptions().map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
-    statsFilter.value = keepValue;
-    statsCategoryFilter = keepValue;
-  }
-}
-function refreshArticleTitleUI() {
-  const list = document.getElementById('article-title-options');
-  list.innerHTML = getArticleTitles().map(title => `<option value="${escapeHtml(title)}"></option>`).join('');
-}
-function setModalContentNote(value) {
-  const sel = document.getElementById('m-note-sel');
-  const inp = document.getElementById('m-note-input');
-  const options = getContentTypeOptions();
-  if (options.includes(value)) {
-    sel.value = value;
-    inp.value = '';
-    inp.style.display = 'none';
-  } else if (value) {
-    sel.value = '__custom__';
-    inp.value = value;
-    inp.style.display = '';
-  } else {
-    sel.value = '';
-    inp.value = '';
-    inp.style.display = 'none';
-  }
-}
-function getModalContentNote() {
-  const sel = document.getElementById('m-note-sel').value;
-  const inp = document.getElementById('m-note-input').value.trim();
-  return normalizeCategoryValue(sel === '__custom__' ? inp : sel);
+// PC nav
+document.querySelectorAll('.pc-tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.pc-tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.pc-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $id('pc-tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='log')renderLog();
+    if(btn.dataset.tab==='stats')renderStats();
+  });
+});
+// Mobile nav
+function mobSwitchPage(name,btn){
+  document.querySelectorAll('.mob-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.mob-nav-item').forEach(b=>b.classList.remove('active'));
+  $id('mob-page-'+name).classList.add('active');
+  btn.classList.add('active');
+  document.querySelector('.mob-page-wrap').scrollTop=0;
+  if(name==='log')renderLog();
+  if(name==='stats')renderStats();
 }
 
 // ════════════════════════════════════════════════════════
-// SESSIONS LOGIC
+// TIMER
 // ════════════════════════════════════════════════════════
-function todaySessions() {
-  const t = todayStr();
-  return getSessions().filter(s => normalizeDateValue(s.date) === t && s.status === 'completed');
-}
-function todayMinutes() {
-  return todaySessions().reduce((a, s) => a + (parseInt(s.duration_minutes) || 0), 0);
-}
-
-function calcStreakFromSessions(sessionList) {
-  const sessions = sessionList
-    .filter(s => s.status === 'completed' && s.duration_minutes > 0)
-    .map(s => ({ ...s, content_note: normalizeCategoryValue(s.content_note) }));
-  const days = [...new Set(sessions.map(s => s.date))].sort();
-  if (!days.length) return 0;
-  const today = todayStr();
-  let streak = 0, cur = today;
-  for (let i = days.length - 1; i >= 0; i--) {
-    if (days[i] === cur) {
-      streak++;
-      const d = new Date(cur); d.setDate(d.getDate() - 1);
-      cur = localDateStr(d);
-    } else if (days[i] < cur) {
-      if (streak === 0) { streak = 0; break; } // today not studied yet
-      break;
-    }
-  }
-  // If today not in days, check yesterday
-  if (streak === 0) {
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-    const yd = localDateStr(yesterday);
-    let s2 = 0, c2 = yd;
-    for (let i = days.length - 1; i >= 0; i--) {
-      if (days[i] === c2) { s2++; const d = new Date(c2); d.setDate(d.getDate()-1); c2 = localDateStr(d); }
-      else if (days[i] < c2) break;
-    }
-    streak = s2;
-  }
+function todaySessions(){const t=todayStr();return getSessions().filter(s=>normalizeDateValue(s.date)===t&&s.status==='completed')}
+function calcStreakFromSessions(list){
+  const sessions=list.filter(s=>s.status==='completed'&&s.duration_minutes>0).map(s=>({...s,content_note:normalizeCategoryValue(s.content_note)}));
+  const days=[...new Set(sessions.map(s=>s.date))].sort();
+  if(!days.length)return 0;
+  const today=todayStr();let streak=0,cur=today;
+  for(let i=days.length-1;i>=0;i--){if(days[i]===cur){streak++;const d=new Date(cur);d.setDate(d.getDate()-1);cur=localDateStr(d)}else if(days[i]<cur){if(streak===0){streak=0;break}break}}
+  if(streak===0){const y=new Date();y.setDate(y.getDate()-1);const yd=localDateStr(y);let s2=0,c2=yd;for(let i=days.length-1;i>=0;i--){if(days[i]===c2){s2++;const d=new Date(c2);d.setDate(d.getDate()-1);c2=localDateStr(d)}else if(days[i]<c2)break}streak=s2}
   return streak;
 }
-function calcStreak() {
-  return calcStreakFromSessions(getSessions());
+function calcStreak(){return calcStreakFromSessions(getSessions())}
+
+function getPCContentNote(){const s=$id('pc-content-note-sel').value;return s==='__custom__'?$id('pc-content-note-input').value.trim():s}
+function getMobContentNote(){const s=$id('mob-content-note-sel').value;return s==='__custom__'?$id('mob-content-note-input').value.trim():s}
+function getContentNote(){return isMobile()?getMobContentNote():getPCContentNote()}
+function getPCArticle(){return $id('pc-article-title-input').value.trim()}
+function getMobArticle(){return $id('mob-article-title-input').value.trim()}
+function getArticleTitle(){return isMobile()?getMobArticle():getPCArticle()}
+
+function startSession(){
+  if(getActive()){showToast('已有进行中的计时，请先结束','error');return}
+  const note=getContentNote(),article=getArticleTitle();
+  ensureContentTypeExists(note);rememberArticleTitle(article);
+  const now=new Date();
+  saveActive({id:uid(),date:normalizeDateValue(localDateStr(now)),start_time:localTimeStr(now),end_time:'',duration_minutes:'',content_note:note,article_title:article,status:'active'});
+  refreshContentTypeUI();refreshArticleTitleUI();
+  showToast('计时开始','success');updateTimerUI();startTick();
+}
+function endSession(){
+  const active=getActive();if(!active)return;
+  const now=new Date(),dur=diffMinutesFloor(timeStrToDate(active.date,active.start_time),now);
+  if(dur<0){showToast('时间异常','error');return}
+  const note=getContentNote()||active.content_note,article=getArticleTitle()||active.article_title;
+  ensureContentTypeExists(note);rememberArticleTitle(article);
+  const sessions=getSessions();
+  sessions.push({...active,end_time:localTimeStr(now),duration_minutes:dur,content_note:note,article_title:article,status:'completed'});
+  saveSessions(sessions);saveActive(null);
+  refreshContentTypeUI();refreshArticleTitleUI();
+  clearInterval(timerInterval);timerInterval=null;
+  showToast(`计时结束，本次 ${fmtMinutes(dur)}`,'success');
+  resetInputs();updateTimerUI();renderAll();
+}
+function resetInputs(){
+  ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{const el=$id(id);if(el)el.value=''});
+  ['pc-content-note-input','mob-content-note-input'].forEach(id=>{const el=$id(id);if(el){el.value='';el.style.display='none'}});
+  ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=''});
+}
+function startTick(){clearInterval(timerInterval);timerInterval=setInterval(tickTimer,1000);tickTimer()}
+function tickTimer(){
+  const active=getActive();if(!active){clearInterval(timerInterval);return}
+  const elapsed=Date.now()-timeStrToDate(active.date,active.start_time).getTime();
+  const t=fmtElapsed(Math.max(0,elapsed));
+  [$id('pc-timer-display'),$id('mob-timer-display')].forEach(el=>{if(el)el.textContent=t});
 }
 
-// ════════════════════════════════════════════════════════
-// ACTIVE SESSION
-// ════════════════════════════════════════════════════════
-function startSession() {
-  const existing = getActive();
-  if (existing) { showToast('当前已有进行中的计时，请先结束', 'error'); return; }
-
-  const note = getContentNote();
-  const article = document.getElementById('article-title-input').value.trim();
-  ensureContentTypeExists(note);
-  rememberArticleTitle(article);
-  const now = new Date();
-  const session = {
-    id: uid(),
-    date: normalizeDateValue(localDateStr(now)),
-    start_time: localTimeStr(now),
-    end_time: '',
-    duration_minutes: '',
-    content_note: note,
-    article_title: article,
-    status: 'active'
-  };
-  saveActive(session);
-  refreshContentTypeUI();
-  refreshArticleTitleUI();
-  showToast('计时开始', 'success');
-  updateTimerUI();
-  startTick();
-}
-
-function endSession() {
-  const active = getActive();
-  if (!active) return;
-  const now = new Date();
-  const endTime = localTimeStr(now);
-  const startDt = timeStrToDate(active.date, active.start_time);
-  const dur = diffMinutesFloor(startDt, now);
-
-  if (dur < 0) { showToast('结束时间早于开始时间，请检查系统时间', 'error'); return; }
-
-  // Supplement note/article if user filled after starting
-  const note = getContentNote() || active.content_note;
-  const article = document.getElementById('article-title-input').value.trim() || active.article_title;
-  ensureContentTypeExists(note);
-  rememberArticleTitle(article);
-
-  const completed = {
-    ...active,
-    end_time: endTime,
-    duration_minutes: dur,
-    content_note: note,
-    article_title: article,
-    status: 'completed'
-  };
-
-  const sessions = getSessions();
-  sessions.push(completed);
-  saveSessions(sessions);
-  saveActive(null);
-  refreshContentTypeUI();
-  refreshArticleTitleUI();
-
-  clearInterval(timerInterval); timerInterval = null;
-  showToast(`计时结束，本次 ${fmtMinutes(dur)}`, 'success');
-  resetInputs();
-  updateTimerUI();
-  renderAll();
-}
-
-function getContentNote() {
-  const sel = document.getElementById('content-note-sel').value;
-  if (sel === '__custom__') return document.getElementById('content-note-input').value.trim();
-  return sel;
-}
-
-function resetInputs() {
-  document.getElementById('content-note-sel').value = '';
-  document.getElementById('content-note-input').value = '';
-  document.getElementById('content-note-input').style.display = 'none';
-  document.getElementById('article-title-input').value = '';
-}
-
-function startTick() {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(tickTimer, 1000);
-  tickTimer();
-}
-
-function tickTimer() {
-  const active = getActive();
-  if (!active) { clearInterval(timerInterval); return; }
-  const startDt = timeStrToDate(active.date, active.start_time);
-  const elapsed = Date.now() - startDt.getTime();
-  const el = document.getElementById('timer-display');
-  el.textContent = fmtElapsed(Math.max(0, elapsed));
-}
-
-// ════════════════════════════════════════════════════════
-// UI UPDATE
-// ════════════════════════════════════════════════════════
-function updateTimerUI() {
-  const active = getActive();
-  const dot = document.getElementById('status-dot');
-  const text = document.getElementById('status-text');
-  const display = document.getElementById('timer-display');
-  const btnStart = document.getElementById('btn-start');
-  const btnEnd = document.getElementById('btn-end');
-
-  if (active) {
-    dot.classList.add('active');
-    text.textContent = '进行中';
-    display.classList.add('active');
-    btnStart.style.display = 'none';
-    btnEnd.style.display = '';
-    // Restore fields
-    const sel = document.getElementById('content-note-sel');
-    const options = getContentTypeOptions();
-    if (options.includes(active.content_note)) {
-      sel.value = active.content_note;
-    } else if (active.content_note) {
-      sel.value = '__custom__';
-      document.getElementById('content-note-input').value = active.content_note;
-      document.getElementById('content-note-input').style.display = '';
-    }
-    document.getElementById('article-title-input').value = active.article_title || '';
-    if (!timerInterval) startTick();
-  } else {
-    dot.classList.remove('active');
-    text.textContent = '未开始';
-    display.classList.remove('active');
-    display.textContent = '00:00:00';
-    btnStart.style.display = '';
-    btnEnd.style.display = 'none';
-  }
-}
-
-function renderToday() {
-  const t = todayStr();
-  // Date label
-  const d = new Date();
-  const weekdays = ['日','一','二','三','四','五','六'];
-  document.getElementById('today-date-row').textContent =
-    `${t}  周${weekdays[d.getDay()]}`;
-
-  const sessions = todaySessions();
-  const mins = sessions.reduce((a,s) => a + (parseInt(s.duration_minutes)||0), 0);
-  document.getElementById('today-total').innerHTML =
-    mins > 0 ? `${Math.floor(mins/60)}<span class="stat-unit">h</span>${mins%60}<span class="stat-unit">m</span>` : '0<span class="stat-unit">m</span>';
-  document.getElementById('today-count').innerHTML = `${sessions.length}<span class="stat-unit">次</span>`;
-  document.getElementById('today-streak').innerHTML = `${calcStreak()}<span class="stat-unit">天</span>`;
-
-  // Recent 3
-  const allDone = getSessions().filter(s => s.status === 'completed')
-    .map(s => ({ ...s, date: normalizeDateValue(s.date) }))
-    .sort((a,b) => (b.date+b.start_time).localeCompare(a.date+a.start_time));
-  const recent = allDone.slice(0, 3);
-  const el = document.getElementById('recent-list');
-  if (!recent.length) { el.innerHTML = '<div class="empty">暂无记录</div>'; return; }
-  el.innerHTML = recent.map(s => `
-    <div class="record-item">
-      <span class="record-time">${s.start_time.slice(0,5)} – ${s.end_time ? s.end_time.slice(0,5) : '—'}</span>
-      <span class="record-duration">${fmtMinutes(s.duration_minutes)}</span>
-      ${s.content_note ? `<span class="badge badge-note">${escapeHtml(s.content_note)}</span>` : ''}
-      <span class="record-note">${escapeHtml(s.article_title || '')}</span>
-      <div class="row-actions">
-        <button class="btn-edit" onclick="openAddModal('${s.id}')" title="编辑">编辑</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ════════════════════════════════════════════════════════
-// LOG TAB
-// ════════════════════════════════════════════════════════
-function renderLog() {
-  let sessions = getSessions()
-    .filter(s => s.status === 'completed')
-    .map(s => ({ ...s, date: normalizeDateValue(s.date) }))
-    .sort((a,b) => (b.date+b.start_time).localeCompare(a.date+a.start_time));
-
-  const fDate = document.getElementById('filter-date').value;
-  const fNote = document.getElementById('filter-note').value;
-  if (fDate) sessions = sessions.filter(s => s.date === fDate);
-  if (fNote) sessions = sessions.filter(s => s.content_note === fNote);
-
-  const tbody = document.getElementById('log-tbody');
-  if (!sessions.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无记录</td></tr>';
-    return;
-  }
-  tbody.innerHTML = sessions.map(s => `
-    <tr>
-      <td class="td-muted td-mono">${escapeHtml(s.date)}</td>
-      <td class="td-mono">${escapeHtml(s.start_time)}</td>
-      <td class="td-mono">${escapeHtml(s.end_time || '—')}</td>
-      <td class="td-mono" style="font-weight:600;">${s.duration_minutes != null && s.duration_minutes !== '' ? escapeHtml(s.duration_minutes) + ' 分' : '—'}</td>
-      <td>${s.content_note ? `<span class="badge badge-note">${escapeHtml(s.content_note)}</span>` : '<span class="td-muted">—</span>'}</td>
-      <td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title || '—')}</td>
-      <td>
-        <div class="row-actions">
-          <button class="btn-edit" onclick="openAddModal('${s.id}')" title="编辑">编辑</button>
-          <button class="btn-del" onclick="deleteRecord('${s.id}')" title="删除">✕</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function deleteRecord(id) {
-  if (!confirm('确认删除这条记录？')) return;
-  const sessions = getSessions().filter(s => s.id !== id);
-  saveSessions(sessions);
-  renderAll();
-  showToast('已删除', 'success');
-}
-
-// ════════════════════════════════════════════════════════
-// MANUAL ADD
-// ════════════════════════════════════════════════════════
-function openAddModal(recordId = null) {
-  editingRecordId = recordId;
-  const record = recordId ? getSessions().find(s => s.id === recordId) : null;
-  document.getElementById('modal-title').textContent = record ? '编辑记录' : '手动补录记录';
-  document.getElementById('modal-save-btn').textContent = record ? '保存修改' : '保存';
-  document.getElementById('m-date').value = record?.date || todayStr();
-  document.getElementById('m-start').value = toInputTime(record?.start_time || '');
-  document.getElementById('m-end').value = toInputTime(record?.end_time || '');
-  setModalContentNote(record?.content_note || '');
-  document.getElementById('m-article').value = record?.article_title || '';
-  setVoiceStatus('');
-  updateDurationPreview();
-  document.getElementById('add-modal').classList.add('open');
-}
-function openVoiceAddModal() {
-  openAddModal();
-  startVoiceFill();
-}
-function closeAddModal() {
-  stopVoiceFill(false);
-  editingRecordId = null;
-  setVoiceStatus('');
-  document.getElementById('add-modal').classList.remove('open');
-}
-function saveManualRecord() {
-  const isEditing = !!editingRecordId;
-  const date    = normalizeDateValue(document.getElementById('m-date').value);
-  const start   = document.getElementById('m-start').value;
-  const end     = document.getElementById('m-end').value;
-  const note    = getModalContentNote();
-  const article = document.getElementById('m-article').value.trim();
-
-  if (!date || !start || !end) { showToast('日期、开始和结束时间为必填项', 'error'); return; }
-
-  const startFull = toFullTime(start);
-  const endFull   = toFullTime(end);
-
-  const startDt = timeStrToDate(date, startFull);
-  const endDt   = timeStrToDate(date, endFull);
-  let dur = diffMinutesFloor(startDt, endDt);
-  if (dur < 0) { showToast('结束时间不能早于开始时间', 'error'); return; }
-  ensureContentTypeExists(note);
-  rememberArticleTitle(article);
-  const sessions = getSessions();
-  if (editingRecordId) {
-    const idx = sessions.findIndex(s => s.id === editingRecordId);
-    if (idx === -1) { showToast('未找到要编辑的记录', 'error'); return; }
-    sessions[idx] = {
-      ...sessions[idx],
-      date,
-      start_time: startFull,
-      end_time: endFull,
-      duration_minutes: dur,
-      content_note: note,
-      article_title: article,
-      status: 'completed'
-    };
-  } else {
-    sessions.push({
-      id: uid(),
-      date,
-      start_time: startFull,
-      end_time: endFull,
-      duration_minutes: dur,
-      content_note: note,
-      article_title: article,
-      status: 'completed'
+function updateTimerUI(){
+  const active=getActive();
+  // PC
+  const pDot=$id('pc-status-dot'),pText=$id('pc-status-text'),pDisp=$id('pc-timer-display'),pStart=$id('pc-btn-start'),pEnd=$id('pc-btn-end');
+  // Mobile
+  const mDot=$id('mob-status-dot'),mText=$id('mob-status-text'),mDisp=$id('mob-timer-display'),mStart=$id('mob-btn-start'),mEnd=$id('mob-btn-end');
+  if(active){
+    [pDot,mDot].forEach(el=>{if(el)el.classList.add('running')});
+    [pText,mText].forEach(el=>{if(el)el.textContent='进行中'});
+    [pDisp,mDisp].forEach(el=>{if(el)el.classList.add('running')});
+    if(pStart)pStart.style.display='none';if(pEnd)pEnd.style.display='';
+    if(mStart)mStart.style.display='none';if(mEnd)mEnd.style.display='';
+    // restore fields
+    const opts=getContentTypeOptions();
+    ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{
+      const sel=$id(id);if(!sel)return;
+      if(opts.includes(active.content_note))sel.value=active.content_note;
+      else if(active.content_note){sel.value='__custom__';
+        const inp=$id(id.replace('-sel','-input'));if(inp){inp.value=active.content_note;inp.style.display='';}}
     });
+    ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=active.article_title||''});
+    if(!timerInterval)startTick();
+  } else {
+    [pDot,mDot].forEach(el=>{if(el)el.classList.remove('running')});
+    [pText,mText].forEach(el=>{if(el)el.textContent='未开始'});
+    [pDisp,mDisp].forEach(el=>{if(el){el.classList.remove('running');el.textContent='00:00:00'}});
+    if(pStart)pStart.style.display='';if(pEnd)pEnd.style.display='none';
+    if(mStart)mStart.style.display='';if(mEnd)mEnd.style.display='none';
   }
-  saveSessions(sessions);
-  closeAddModal();
-  refreshContentTypeUI();
-  refreshArticleTitleUI();
-  renderAll();
-  showToast(isEditing ? '修改已保存' : '补录成功', 'success');
 }
 
-// Duration preview in modal
-function updateDurationPreview() {
-  const date  = document.getElementById('m-date').value;
-  const start = document.getElementById('m-start').value;
-  const end   = document.getElementById('m-end').value;
-  const el    = document.getElementById('m-duration-preview');
-  if (!date || !start || !end) { el.textContent = ''; return; }
-  const s = timeStrToDate(date, start+':00');
-  const e = timeStrToDate(date, end+':00');
-  const d = diffMinutesFloor(s, e);
-  el.textContent = d >= 0 ? `预计时长：${d} 分钟` : '⚠ 结束时间早于开始时间';
+// ════════════════════════════════════════════════════════
+// RENDER TODAY
+// ════════════════════════════════════════════════════════
+function renderToday(){
+  const d=new Date(),weekdays=['日','一','二','三','四','五','六'];
+  const dateLabel=`${todayStr()}  周${weekdays[d.getDay()]}`;
+  [$id('pc-today-date-row'),$id('mob-today-date')].forEach(el=>{if(el)el.textContent=dateLabel});
+  const sessions=todaySessions(),mins=sessions.reduce((a,s)=>a+(parseInt(s.duration_minutes)||0),0);
+  const totalHTML=mins>0?`${Math.floor(mins/60)}<span class="stat-unit">h</span>${mins%60}<span class="stat-unit">m</span>`:'0<span class="stat-unit">m</span>';
+  if($id('pc-today-total'))$id('pc-today-total').innerHTML=totalHTML;
+  if($id('pc-today-count'))$id('pc-today-count').innerHTML=`${sessions.length}<span class="stat-unit">次</span>`;
+  if($id('pc-today-streak'))$id('pc-today-streak').innerHTML=`${calcStreak()}<span class="stat-unit">天</span>`;
+  if($id('mob-today-total'))$id('mob-today-total').innerHTML=mins>0?`${Math.floor(mins/60)}<span class="mob-stat-unit">h</span>${mins%60}<span class="mob-stat-unit">m</span>`:`0<span class="mob-stat-unit">m</span>`;
+  if($id('mob-today-count'))$id('mob-today-count').innerHTML=`${sessions.length}<span class="mob-stat-unit">次</span>`;
+  if($id('mob-today-streak'))$id('mob-today-streak').innerHTML=`${calcStreak()}<span class="mob-stat-unit">天</span>`;
+  const allDone=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>(b.date+b.start_time).localeCompare(a.date+a.start_time)).slice(0,5);
+  // PC recent
+  const pcList=$id('pc-recent-list');
+  if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${s.start_time.slice(0,5)} – ${s.end_time?s.end_time.slice(0,5):'—'}</span><span class="record-duration">${fmtMinutes(s.duration_minutes)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button></div></div>`).join('');}}
+  // Mobile recent
+  const mobList=$id('mob-recent-list');
+  if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${fmtMinutes(s.duration_minutes)}</div><div class="mob-rec-meta">${s.start_time.slice(0,5)} – ${s.end_time?s.end_time.slice(0,5):'—'} · ${s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button></div>`).join('');}}
 }
 
-function openContentTypeManager() {
+// ════════════════════════════════════════════════════════
+// RENDER LOG
+// ════════════════════════════════════════════════════════
+function renderLog(){
+  let sessions=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>(b.date+b.start_time).localeCompare(a.date+a.start_time));
+  const fDate=isMobile()?($id('mob-filter-date')||{}).value:($id('pc-filter-date')||{}).value;
+  const fNote=isMobile()?($id('mob-filter-note')||{}).value:($id('pc-filter-note')||{}).value;
+  if(fDate)sessions=sessions.filter(s=>s.date===fDate);
+  if(fNote)sessions=sessions.filter(s=>s.content_note===fNote);
+  // PC table
+  const tbody=$id('pc-log-tbody');
+  if(tbody){if(!sessions.length){tbody.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';}else{tbody.innerHTML=sessions.map(s=>`<tr><td class="td-muted td-mono">${escapeHtml(s.date)}</td><td class="td-mono">${escapeHtml(s.start_time)}</td><td class="td-mono">${escapeHtml(s.end_time||'—')}</td><td class="td-mono" style="font-weight:600;">${s.duration_minutes!=null&&s.duration_minutes!==''?escapeHtml(String(s.duration_minutes))+' 分':'—'}</td><td>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:'<span class="td-muted">—</span>'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'—')}</td><td><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></td></tr>`).join('');}}
+  // Mobile list
+  const mlist=$id('mob-log-list');
+  if(mlist){if(!sessions.length){mlist.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mlist.innerHTML=sessions.map(s=>`<div class="mob-log-item"><div class="mob-log-date"><div class="mob-log-day">${s.date.slice(8)}</div><div class="mob-log-mon">${s.date.slice(5,7)}月</div></div><div class="mob-log-detail"><div class="mob-log-times">${s.start_time.slice(0,5)} – ${s.end_time?s.end_time.slice(0,5):'—'}${s.content_note?' · '+escapeHtml(s.content_note):''}</div><div class="mob-log-article">${escapeHtml(s.article_title||'—')}</div></div><div class="mob-log-right"><div class="mob-log-dur">${fmtMinutes(s.duration_minutes)}</div><div class="mob-log-btns"><button class="mob-log-btn" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-log-btn" onclick="deleteRecord('${s.id}')" style="color:var(--red);">✕</button></div></div></div>`).join('');}}
+}
+
+function deleteRecord(id){
+  if(!confirm('确认删除这条记录？'))return;
+  saveSessions(getSessions().filter(s=>s.id!==id));
+  renderAll();showToast('已删除');
+}
+
+// ════════════════════════════════════════════════════════
+// MODAL / SHEET
+// ════════════════════════════════════════════════════════
+function setModalContentNote(v){
+  const sel=$id('m-note-sel'),inp=$id('m-note-input'),opts=getContentTypeOptions();
+  if(opts.includes(v)){sel.value=v;inp.value='';inp.style.display='none'}
+  else if(v){sel.value='__custom__';inp.value=v;inp.style.display=''}
+  else{sel.value='';inp.value='';inp.style.display='none'}
+}
+function getModalContentNote(){const s=$id('m-note-sel').value,i=$id('m-note-input').value.trim();return normalizeCategoryValue(s==='__custom__'?i:s)}
+
+function openAddModal(recordId=null){
+  editingRecordId=recordId;
+  const record=recordId?getSessions().find(s=>s.id===recordId):null;
+  const titleText=record?'编辑记录':'手动补录';
+  const saveText=record?'保存修改':'保存';
+  [$id('pc-modal-title'),$id('mob-modal-title')].forEach(el=>{if(el)el.textContent=titleText});
+  [$id('modal-save-btn'),$id('mob-modal-save-btn')].forEach(el=>{if(el)el.textContent=saveText});
+  $id('m-date').value=record?.date||todayStr();
+  $id('m-start').value=toInputTime(record?.start_time||'');
+  $id('m-end').value=toInputTime(record?.end_time||'');
+  setModalContentNote(record?.content_note||'');
+  $id('m-article').value=record?.article_title||'';
+  setVoiceStatus('');resetVoiceBtn();updateDurationPreview();
+  if(isMobile())$id('mob-add-modal').classList.add('open');
+  else $id('pc-add-modal').classList.add('open');
+}
+function openVoiceAddModal(){openAddModal();startVoiceFill()}
+function closeAddModal(){
+  stopVoiceFill();
+  $id('pc-add-modal').classList.remove('open');
+  $id('mob-add-modal').classList.remove('open');
+  editingRecordId=null;
+}
+
+function saveManualRecord(){
+  const date=normalizeDateValue($id('m-date').value),start=$id('m-start').value,end=$id('m-end').value;
+  const note=getModalContentNote(),article=$id('m-article').value.trim();
+  if(!date||!start||!end){showToast('日期、开始和结束时间为必填','error');return}
+  const sf=toFullTime(start),ef=toFullTime(end),dur=diffMinutesFloor(timeStrToDate(date,sf),timeStrToDate(date,ef));
+  if(dur<0){showToast('结束时间不能早于开始时间','error');return}
+  ensureContentTypeExists(note);rememberArticleTitle(article);
+  const sessions=getSessions(),isEditing=!!editingRecordId;
+  if(isEditing){const idx=sessions.findIndex(s=>s.id===editingRecordId);if(idx===-1){showToast('未找到记录','error');return};sessions[idx]={...sessions[idx],date,start_time:sf,end_time:ef,duration_minutes:dur,content_note:note,article_title:article,status:'completed'}}
+  else sessions.push({id:uid(),date,start_time:sf,end_time:ef,duration_minutes:dur,content_note:note,article_title:article,status:'completed'});
+  saveSessions(sessions);closeAddModal();refreshContentTypeUI();refreshArticleTitleUI();renderAll();
+  showToast(isEditing?'修改已保存':'补录成功','success');
+}
+
+function updateDurationPreview(){
+  const date=$id('m-date').value,start=$id('m-start').value,end=$id('m-end').value,el=$id('m-duration-preview');
+  if(!date||!start||!end){el.textContent='';return}
+  const d=diffMinutesFloor(timeStrToDate(date,start+':00'),timeStrToDate(date,end+':00'));
+  el.textContent=d>=0?`预计时长：${d} 分钟`:'⚠ 结束时间早于开始时间';
+}
+
+// ════════════════════════════════════════════════════════
+// VOICE
+// ════════════════════════════════════════════════════════
+function setVoiceStatus(text,active=false){
+  [$id('pc-voice-status'),$id('mob-voice-status')].forEach(el=>{if(!el)return;el.textContent=text||'';el.classList.toggle('show',!!(text||active))});
+}
+function resetVoiceBtn(){
+  const pcBtn=$id('pc-voice-btn'),pcTxt=$id('pc-voice-btn-text');
+  const mBtn=$id('mob-voice-btn'),mIcon=$id('mob-voice-btn-icon'),mTxt=$id('mob-voice-btn-text');
+  if(pcBtn)pcBtn.classList.remove('recording');
+  if(pcTxt)pcTxt.textContent='点击语音录入';
+  if(mBtn)mBtn.classList.remove('recording');
+  if(mIcon)mIcon.textContent='🎤';
+  if(mTxt)mTxt.textContent='点击开始语音录入';
+}
+function stopVoiceFill(cs=true){if(recognition&&recognitionActive)recognition.stop();recognitionActive=false;resetVoiceBtn();if(cs)setVoiceStatus('')}
+function startVoiceFill(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('当前浏览器不支持语音识别，请用 Chrome 或 Safari（需在浏览器中打开，不支持微信内置浏览器）','error');return}
+  if(recognitionActive){stopVoiceFill();return}
+  if(!recognition){
+    recognition=new SR();recognition.lang='zh-CN';recognition.interimResults=false;recognition.maxAlternatives=1;
+    recognition.onresult=e=>{const text=Array.from(e.results).map(r=>r[0].transcript).join('').trim();if(!text)return;applySpeechToModal(text)};
+    recognition.onerror=e=>{recognitionActive=false;resetVoiceBtn();const msg=e.error==='not-allowed'?'麦克风权限被拒绝，请允许后重试':'语音识别失败，请重试';setVoiceStatus(msg);showToast(msg,'error')};
+    recognition.onend=()=>{recognitionActive=false;resetVoiceBtn()};
+  }
+  const pcBtn=$id('pc-voice-btn'),pcTxt=$id('pc-voice-btn-text'),mBtn=$id('mob-voice-btn'),mIcon=$id('mob-voice-btn-icon'),mTxt=$id('mob-voice-btn-text');
+  if(pcBtn)pcBtn.classList.add('recording');if(pcTxt)pcTxt.textContent='正在听… 点击停止';
+  if(mBtn)mBtn.classList.add('recording');if(mIcon)mIcon.textContent='⏹';if(mTxt)mTxt.textContent='正在听… 点击停止';
+  setVoiceStatus('正在监听，请说一整句话…',true);
+  recognitionActive=true;recognition.start();
+}
+function applySpeechToModal(text){
+  const parsed=parseSpeechInput(text);
+  if(parsed.date)$id('m-date').value=parsed.date;
+  if(parsed.start)$id('m-start').value=parsed.start;
+  if(parsed.end)$id('m-end').value=parsed.end;
+  if(parsed.note)setModalContentNote(parsed.note);
+  if(parsed.article)$id('m-article').value=parsed.article;
+  updateDurationPreview();setVoiceStatus(`已识别：${text}`);showToast('语音已填入','success');
+}
+function parseSpeechInput(text){
+  const raw=String(text||'').replace(/[，。；、]/g,' ').replace(/\s+/g,' ').trim();
+  const result={date:'',start:'',end:'',note:'',article:''};
+  const today=new Date(),tomorrow=new Date(),yesterday=new Date();
+  tomorrow.setDate(today.getDate()+1);yesterday.setDate(today.getDate()-1);
+  if(raw.includes('明天'))result.date=localDateStr(tomorrow);
+  else if(raw.includes('昨天'))result.date=localDateStr(yesterday);
+  else if(raw.includes('今天'))result.date=localDateStr(today);
+  for(const opt of getContentTypeOptions()){if(raw.includes(opt)){result.note=opt;break}}
+  const tm=[];const tr=/((?:上午|中午|下午|晚上)?)(\d{1,2})\s*(?:点|:|：)\s*(\d{1,2})?\s*(?:分|半)?/g;let m;
+  while((m=tr.exec(raw))!==null){const p=m[1]||'';let h=parseInt(m[2],10);let mi=0;if(m[0].includes('半'))mi=30;else if(m[3]!=null&&m[3]!=='')mi=parseInt(m[3],10);if((p==='下午'||p==='晚上')&&h<12)h+=12;if(p==='中午'&&h<11)h+=12;if(h>=0&&h<24&&mi>=0&&mi<60)tm.push(`${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`)}
+  if(tm[0])result.start=tm[0];if(tm[1])result.end=tm[1];
+  let article=raw;article=article.replace(/今天|明天|昨天/g,' ');article=article.replace(/(?:上午|中午|下午|晚上)?\d{1,2}\s*(?:点|:|：)\s*(?:\d{1,2})?\s*(?:分|半)?/g,' ');article=article.replace(/到|开始|结束|从|学习|训练|活动|事项|补录|记录|语音|计时/g,' ');for(const opt of getContentTypeOptions())article=article.replaceAll(opt,' ');article=article.replace(/\s+/g,' ').trim();result.article=article;
+  return result;
+}
+
+// ════════════════════════════════════════════════════════
+// CONTENT TYPE MANAGER
+// ════════════════════════════════════════════════════════
+function openContentTypeManager(){
   renderContentTypeManager();
-  document.getElementById('content-type-modal').classList.add('open');
+  if(isMobile())$id('mob-content-type-modal').classList.add('open');
+  else $id('pc-content-type-modal').classList.add('open');
 }
-function closeContentTypeManager() {
-  document.getElementById('content-type-modal').classList.remove('open');
+function closeContentTypeManager(){
+  $id('pc-content-type-modal').classList.remove('open');
+  $id('mob-content-type-modal').classList.remove('open');
 }
-function renderContentTypeManager(values = getContentTypeOptions()) {
-  const container = document.getElementById('content-type-list');
-  container.innerHTML = values.map((value, index) => `
-    <div class="manager-row" data-index="${index}">
-      <input class="field-input" value="${escapeHtml(value)}" placeholder="活动分类名称">
-      <div class="manager-actions">
-        <button type="button" onclick="moveContentTypeRow(${index}, -1)">↑</button>
-        <button type="button" onclick="moveContentTypeRow(${index}, 1)">↓</button>
-        <button type="button" onclick="deleteContentTypeRow(${index})">删除</button>
-      </div>
-    </div>
-  `).join('');
+function renderContentTypeManager(values=getContentTypeOptions()){
+  const pcList=$id('pc-content-type-list'),mList=$id('mob-content-type-list');
+  const pcHTML=values.map((v,i)=>`<div class="manager-row"><input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称"><div class="manager-actions"><button onclick="moveContentTypeRow(${i},-1)">↑</button><button onclick="moveContentTypeRow(${i},1)">↓</button><button onclick="deleteContentTypeRow(${i})">删除</button></div></div>`).join('');
+  const mHTML=values.map((v,i)=>`<div class="mob-mgr-row"><input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称" style="background:var(--surface2);"><div class="mob-mgr-btns"><button class="mob-mgr-btn" onclick="moveContentTypeRow(${i},-1)">↑</button><button class="mob-mgr-btn" onclick="moveContentTypeRow(${i},1)">↓</button><button class="mob-mgr-btn" onclick="deleteContentTypeRow(${i})">✕</button></div></div>`).join('');
+  if(pcList)pcList.innerHTML=pcHTML;if(mList)mList.innerHTML=mHTML;
 }
-function getContentTypeManagerValues() {
-  return Array.from(document.querySelectorAll('#content-type-list .manager-row input'))
-    .map(input => input.value.trim())
-    .filter(Boolean);
+function getContentTypeManagerValues(){
+  const active=isMobile()?'mob-content-type-list':'pc-content-type-list';
+  return Array.from(document.querySelectorAll(`#${active} input`)).map(i=>i.value.trim()).filter(Boolean);
 }
-function addContentTypeRow() {
-  const values = getContentTypeManagerValues();
-  values.push('');
-  renderContentTypeManager(values);
-}
-function moveContentTypeRow(index, delta) {
-  const values = getContentTypeManagerValues();
-  const target = index + delta;
-  if (target < 0 || target >= values.length) return;
-  [values[index], values[target]] = [values[target], values[index]];
-  renderContentTypeManager(values);
-}
-function deleteContentTypeRow(index) {
-  const values = getContentTypeManagerValues();
-  values.splice(index, 1);
-  renderContentTypeManager(values);
-}
-function saveContentTypeManager() {
-  const values = getContentTypeManagerValues();
-  saveContentTypeOptions(values);
-  refreshContentTypeUI();
-  closeContentTypeManager();
-  showToast('活动分类已更新', 'success');
-}
-
-function setVoiceStatus(text, active = false) {
-  const el = document.getElementById('voice-status');
-  el.textContent = text || '';
-  el.classList.toggle('active', !!text || active);
-}
-
-function stopVoiceFill(clearStatus = true) {
-  if (recognition && recognitionActive) recognition.stop();
-  recognitionActive = false;
-  if (clearStatus) setVoiceStatus('');
-}
-
-function startVoiceFill() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    showToast('当前浏览器不支持语音识别，请用 Chrome 打开', 'error');
-    return;
-  }
-  if (recognitionActive) {
-    stopVoiceFill();
-    return;
-  }
-  if (!recognition) {
-    recognition = new SR();
-    recognition.lang = 'zh-CN';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      const text = Array.from(event.results).map(r => r[0].transcript).join('').trim();
-      if (!text) return;
-      applySpeechToModal(text);
-    };
-    recognition.onerror = (event) => {
-      recognitionActive = false;
-      const msg = event.error === 'not-allowed'
-        ? '麦克风权限被拒绝，请在 Chrome 里允许麦克风后重试'
-        : '语音识别失败，请重试';
-      setVoiceStatus(msg, false);
-    };
-    recognition.onend = () => {
-      recognitionActive = false;
-      if (document.getElementById('voice-status').textContent === '正在听，请直接说一整句…') {
-        setVoiceStatus('已结束收音，可以继续手动调整字段');
-      }
-    };
-  }
-  setVoiceStatus('正在听，请直接说一整句…', true);
-  recognitionActive = true;
-  recognition.start();
-}
-
-function applySpeechToModal(text) {
-  const parsed = parseSpeechInput(text);
-  if (parsed.date) document.getElementById('m-date').value = parsed.date;
-  if (parsed.start) document.getElementById('m-start').value = parsed.start;
-  if (parsed.end) document.getElementById('m-end').value = parsed.end;
-  if (parsed.note) setModalContentNote(parsed.note);
-  if (parsed.article) document.getElementById('m-article').value = parsed.article;
-  updateDurationPreview();
-  setVoiceStatus(`已识别：${text}`);
-  showToast('语音内容已填入表单', 'success');
-}
-
-function parseSpeechInput(text) {
-  const raw = String(text || '').replace(/[，。；、]/g, ' ').replace(/\s+/g, ' ').trim();
-  const result = { date: '', start: '', end: '', note: '', article: '' };
-  const today = new Date();
-  const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
-  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1);
-
-  if (raw.includes('明天')) result.date = localDateStr(tomorrow);
-  else if (raw.includes('昨天')) result.date = localDateStr(yesterday);
-  else if (raw.includes('今天')) result.date = localDateStr(today);
-
-  for (const option of getContentTypeOptions()) {
-    if (raw.includes(option)) {
-      result.note = option;
-      break;
-    }
-  }
-
-  const timeMatches = [];
-  const timeRegex = /((?:上午|中午|下午|晚上)?)(\d{1,2})\s*(?:点|:|：)\s*(\d{1,2})?\s*(?:分|半)?/g;
-  let match;
-  while ((match = timeRegex.exec(raw)) !== null) {
-    const period = match[1] || '';
-    let hour = parseInt(match[2], 10);
-    let minute = 0;
-    if (match[0].includes('半')) minute = 30;
-    else if (match[3] != null && match[3] !== '') minute = parseInt(match[3], 10);
-    if ((period === '下午' || period === '晚上') && hour < 12) hour += 12;
-    if (period === '中午' && hour < 11) hour += 12;
-    if (hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
-      timeMatches.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
-    }
-  }
-  if (timeMatches[0]) result.start = timeMatches[0];
-  if (timeMatches[1]) result.end = timeMatches[1];
-
-  let article = raw;
-  article = article.replace(/今天|明天|昨天/g, ' ');
-  article = article.replace(/(?:上午|中午|下午|晚上)?\d{1,2}\s*(?:点|:|：)\s*(?:\d{1,2})?\s*(?:分|半)?/g, ' ');
-  article = article.replace(/到|开始|结束|从|学习|训练|活动|事项|补录|记录|语音|计时/g, ' ');
-  for (const option of getContentTypeOptions()) article = article.replaceAll(option, ' ');
-  article = article.replace(/\s+/g, ' ').trim();
-  result.article = article;
-
-  return result;
-}
+function addContentTypeRow(){const v=getContentTypeManagerValues();v.push('');renderContentTypeManager(v)}
+function moveContentTypeRow(i,d){const v=getContentTypeManagerValues(),t=i+d;if(t<0||t>=v.length)return;[v[i],v[t]]=[v[t],v[i]];renderContentTypeManager(v)}
+function deleteContentTypeRow(i){const v=getContentTypeManagerValues();v.splice(i,1);renderContentTypeManager(v)}
+function saveContentTypeManager(){saveContentTypeOptions(getContentTypeManagerValues());refreshContentTypeUI();closeContentTypeManager();showToast('分类已更新','success')}
 
 // ════════════════════════════════════════════════════════
-// CSV EXPORT
+// CSV
 // ════════════════════════════════════════════════════════
-function exportCSV() {
-  const sessions = getSessions()
-    .filter(s => s.status === 'completed')
-    .sort((a,b) => (a.date+a.start_time).localeCompare(b.date+b.start_time));
-
-  const header = ['date','start_time','end_time','duration_minutes','content_note','article_title'];
-  const rows = sessions.map(s => [
-    s.date, s.start_time, s.end_time, s.duration_minutes, s.content_note, s.article_title
-  ].map(v => v == null ? '' : String(v)));
-
-  const csv = [header, ...rows].map(r =>
-    r.map(c => (c.includes(',') || c.includes('"') || c.includes('\n')) ? `"${c.replace(/"/g,'""')}"` : c).join(',')
-  ).join('\r\n');
-
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `活动记录_${todayStr()}.csv`;
-  a.click();
-  showToast(`已导出 ${sessions.length} 条记录`, 'success');
+function exportCSV(){
+  const sessions=getSessions().filter(s=>s.status==='completed').sort((a,b)=>(a.date+a.start_time).localeCompare(b.date+b.start_time));
+  const header=['date','start_time','end_time','duration_minutes','content_note','article_title'];
+  const rows=sessions.map(s=>[s.date,s.start_time,s.end_time,s.duration_minutes,s.content_note,s.article_title].map(v=>v==null?'':String(v)));
+  const csv=[header,...rows].map(r=>r.map(c=>(c.includes(',')||c.includes('"')||c.includes('\n'))?`"${c.replace(/"/g,'""')}"`:c).join(',')).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`活动记录_${todayStr()}.csv`;a.click();
+  showToast(`已导出 ${sessions.length} 条记录`,'success');
 }
-
-// ════════════════════════════════════════════════════════
-// CSV IMPORT  (with column alias mapping)
-// ════════════════════════════════════════════════════════
-const COL_MAP = {
-  date:             ['date','日期','Date'],
-  start_time:       ['start_time','starttime','start','开始时间','开始'],
-  end_time:         ['end_time','endtime','end','结束时间','结束'],
-  duration_minutes: ['duration_minutes','duration','minutes','时长','duration_min'],
-  content_note:     ['content_note','note','content','内容','备注','contentNote'],
-  article_title:    ['article_title','title','article','文章','事项','项目','articleTitle'],
-};
-
-function normalizeHeader(h) { return h.toLowerCase().replace(/[\s_-]/g,''); }
-
-function mapHeaders(headers) {
-  const result = {};
-  headers.forEach((raw, idx) => {
-    const norm = normalizeHeader(raw);
-    for (const [field, aliases] of Object.entries(COL_MAP)) {
-      if (aliases.some(a => normalizeHeader(a) === norm)) { result[field] = idx; break; }
+const COL_MAP={date:['date','日期','Date'],start_time:['start_time','starttime','start','开始时间','开始'],end_time:['end_time','endtime','end','结束时间','结束'],duration_minutes:['duration_minutes','duration','minutes','时长','duration_min'],content_note:['content_note','note','content','内容','备注','contentNote'],article_title:['article_title','title','article','文章','事项','项目','articleTitle']};
+function normalizeHeader(h){return h.toLowerCase().replace(/[\s_-]/g,'')}
+function mapHeaders(headers){const r={};headers.forEach((raw,idx)=>{const n=normalizeHeader(raw);for(const[field,aliases]of Object.entries(COL_MAP)){if(aliases.some(a=>normalizeHeader(a)===n)){r[field]=idx;break}}});return r}
+function parseCSVLine(line){const result=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++}else inQ=!inQ}else if(c===','&&!inQ){result.push(cur);cur=''}else cur+=c}result.push(cur);return result}
+function importCSV(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let text=e.target.result;if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2){showToast('CSV文件内容为空','error');return}
+    const headers=parseCSVLine(lines[0]).map(h=>h.trim()),colMap=mapHeaders(headers);
+    if(colMap.date===undefined){showToast('未找到date列','error');return}
+    const existing=getSessions(),existingIds=new Set(existing.map(s=>s.date+'|'+s.start_time));
+    let imported=0,skipped=0;
+    for(let i=1;i<lines.length;i++){
+      const cells=parseCSVLine(lines[i]).map(c=>c.trim()),get=(f)=>colMap[f]!==undefined?(cells[colMap[f]]||''):'';
+      const date=normalizeDateValue(get('date')),start_time=get('start_time');
+      if(!date||!start_time){skipped++;continue}
+      const key=date+'|'+start_time;if(existingIds.has(key)){skipped++;continue}
+      const end_time=get('end_time');let dm=parseInt(get('duration_minutes'));
+      if(isNaN(dm)||dm<0){if(start_time&&end_time){const s=timeStrToDate(date,start_time.length===5?start_time+':00':start_time);const e=timeStrToDate(date,end_time.length===5?end_time+':00':end_time);dm=diffMinutesFloor(s,e)}else dm=0}
+      existing.push({id:uid(),date,start_time:start_time.length===5?start_time+':00':start_time,end_time:end_time.length===5?end_time+':00':end_time,duration_minutes:dm,content_note:normalizeCategoryValue(get('content_note')),article_title:get('article_title'),status:'completed'});
+      existingIds.add(key);imported++;
     }
-  });
-  return result;
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') {
-      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
-    else cur += c;
-  }
-  result.push(cur);
-  return result;
-}
-
-function processCSVText(text, options = {}) {
-  const { allowRestoreActive = true } = options;
-  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) { showToast('CSV 文件内容为空', 'error'); return false; }
-
-  const headers = parseCSVLine(lines[0]).map(h => h.trim());
-  const colMap = mapHeaders(headers);
-  if (colMap.date === undefined) { showToast('未找到 date 列，请检查文件', 'error'); return false; }
-
-  const existing = getSessions();
-  const existingIds = new Set(existing.map(s => s.date + '|' + s.start_time));
-  let imported = 0, skipped = 0, activeFound = [], dupeFound = 0;
-
-  for (let i = 1; i < lines.length; i++) {
-    const cells = parseCSVLine(lines[i]).map(c => c.trim());
-    const get = (f) => colMap[f] !== undefined ? (cells[colMap[f]] || '') : '';
-
-    const date       = normalizeDateValue(get('date'));
-    const start_time = get('start_time');
-    const end_time   = get('end_time');
-    const dur_raw    = get('duration_minutes');
-    const note       = get('content_note');
-    const article    = get('article_title');
-
-    if (!date || !start_time) { skipped++; continue; }
-
-    if (allowRestoreActive && start_time && !end_time) {
-      activeFound.push({
-        date,
-        start_time: start_time.length === 5 ? start_time + ':00' : start_time,
-        content_note: note,
-        article_title: article
-      });
-      continue;
-    }
-
-    const normalizedStart = start_time.length === 5 ? start_time + ':00' : start_time;
-    const normalizedEnd = end_time && end_time.length === 5 ? end_time + ':00' : end_time;
-
-    let dur = dur_raw !== '' ? Math.floor(parseFloat(dur_raw)) : null;
-    if ((dur === null || isNaN(dur)) && normalizedStart && normalizedEnd) {
-      const s = timeStrToDate(date, normalizedStart);
-      const e = timeStrToDate(date, normalizedEnd);
-      dur = diffMinutesFloor(s, e);
-      if (dur < 0) dur = 0;
-    }
-
-    const key = date + '|' + normalizedStart;
-    if (existingIds.has(key)) { dupeFound++; continue; }
-
-    existing.push({
-      id: uid(),
-      date,
-      start_time: normalizedStart,
-      end_time: normalizedEnd,
-      duration_minutes: dur !== null && !isNaN(dur) ? dur : '',
-      content_note: note,
-      article_title: article,
-      status: 'completed'
-    });
-    ensureContentTypeExists(note);
-    rememberArticleTitle(article);
-    existingIds.add(key);
-    imported++;
-  }
-
-  saveSessions(existing);
-  refreshContentTypeUI();
-  refreshArticleTitleUI();
-
-  if (allowRestoreActive && activeFound.length === 1) {
-    const a = activeFound[0];
-    const currentActive = getActive();
-    if (!currentActive) {
-      saveActive({ id: uid(), ...a, end_time: '', duration_minutes: '', status: 'active' });
-      showToast('发现未结束会话，已恢复为进行中状态', 'warning');
-    } else {
-      showToast('发现1条未结束记录，但当前已有活跃会话，已跳过', 'warning');
-    }
-  } else if (allowRestoreActive && activeFound.length > 1) {
-    showToast(`发现 ${activeFound.length} 条未结束记录，已全部跳过，请手动处理`, 'warning');
-  }
-
-  let msg = `导入完成：${imported} 条新记录`;
-  if (dupeFound) msg += `，${dupeFound} 条重复已跳过`;
-  if (skipped) msg += `，${skipped} 条无效行已跳过`;
-  showToast(msg, 'success');
-  renderAll();
-  initStatsYear();
-  return true;
-}
-
-function importCSV(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    processCSVText(e.target.result);
-    event.target.value = '';
+    saveSessions(existing);hydratePreferencesFromSessions();refreshContentTypeUI();refreshArticleTitleUI();renderAll();
+    showToast(`导入 ${imported} 条，跳过 ${skipped} 条`,'success');
   };
-  reader.readAsText(file, 'utf-8');
+  reader.readAsText(file,'utf-8');event.target.value='';
 }
 
 // ════════════════════════════════════════════════════════
-// STATS TAB
+// STATS
 // ════════════════════════════════════════════════════════
-function initStatsYear() {
-  const sessions = getSessions().filter(s => s.status === 'completed');
-  if (sessions.length) {
-    const latest = sessions.map(s => parseInt(s.date.slice(0,4))).filter(Boolean);
-    statsYear = Math.max(...latest);
-  } else {
-    statsYear = new Date().getFullYear();
-  }
-  document.getElementById('stats-year-display').textContent = statsYear;
+function initStatsYear(){
+  const sessions=getSessions();
+  if(sessions.length){const years=[...new Set(sessions.map(s=>normalizeDateValue(s.date).slice(0,4)).filter(Boolean))].sort();statsYear=parseInt(years[years.length-1])||new Date().getFullYear()}
+  else statsYear=new Date().getFullYear();
 }
-function changeYear(delta) {
-  statsYear += delta;
-  document.getElementById('stats-year-display').textContent = statsYear;
+function changeYear(d){statsYear+=d;[$id('pc-stats-year-display'),$id('mob-stats-year-display')].forEach(el=>{if(el)el.textContent=statsYear});renderStats()}
+
+function renderStats(){
+  const yr=statsYear;
+  [$id('pc-stats-year-display'),$id('mob-stats-year-display')].forEach(el=>{if(el)el.textContent=yr});
+  let sessions=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date),content_note:normalizeCategoryValue(s.content_note)}));
+  const yearSessions=sessions.filter(s=>s.date.startsWith(String(yr)));
+  let filteredSessions=statsCategoryFilter?yearSessions.filter(s=>s.content_note===statsCategoryFilter):yearSessions;
+  const dayMap={};filteredSessions.forEach(s=>{const d=s.date;if(!dayMap[d])dayMap[d]={minutes:0,count:0};dayMap[d].minutes+=Math.floor(parseFloat(s.duration_minutes)||0);dayMap[d].count++});
+  const totalMins=yearSessions.reduce((a,s)=>a+Math.floor(parseFloat(s.duration_minutes)||0),0);
+  const learnDays=[...new Set(yearSessions.map(s=>s.date).filter(d=>(dayMap[d]||{}).minutes>0))].length;
+  const avgMins=learnDays?Math.floor(totalMins/learnDays):0;
+  const streak=calcStreakFromSessions(filteredSessions);
+  const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
+  // PC stats cards
+  if($id('pc-stats-cards'))$id('pc-stats-cards').innerHTML=`<div class="stat-card"><div class="stat-card-label">全年总时长${sfx}</div><div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">活跃天数</div><div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div></div><div class="stat-card"><div class="stat-card-label">日均时长</div><div class="stat-card-value">${Math.floor(avgMins/60)}<span class="stat-card-unit">h ${avgMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">当前连续</div><div class="stat-card-value">${streak}<span class="stat-card-unit">天</span></div></div>`;
+  // Mobile stats cards
+  if($id('mob-stats-cards'))$id('mob-stats-cards').innerHTML=`<div class="mob-sc-card"><div class="mob-sc-lbl">全年总时长${sfx}</div><div class="mob-sc-val">${Math.floor(totalMins/60)}<span class="mob-sc-unit">h ${totalMins%60}m</span></div></div><div class="mob-sc-card"><div class="mob-sc-lbl">活跃天数</div><div class="mob-sc-val">${learnDays}<span class="mob-sc-unit">天</span></div></div><div class="mob-sc-card"><div class="mob-sc-lbl">日均时长</div><div class="mob-sc-val">${Math.floor(avgMins/60)}<span class="mob-sc-unit">h ${avgMins%60}m</span></div></div><div class="mob-sc-card"><div class="mob-sc-lbl">当前连续</div><div class="mob-sc-val">${streak}<span class="mob-sc-unit">天</span></div></div>`;
+  // Category summary (PC)
+  const catMap={};yearSessions.forEach(s=>{const n=s.content_note||'未分类';if(!catMap[n])catMap[n]={minutes:0,count:0};catMap[n].minutes+=Math.floor(parseFloat(s.duration_minutes)||0);catMap[n].count++});
+  const catEntries=Object.entries(catMap).sort((a,b)=>b[1].minutes-a[1].minutes);
+  const maxCatMins=catEntries.length?catEntries[0][1].minutes:1;
+  if($id('pc-stats-summary')){if(!catEntries.length)$id('pc-stats-summary').innerHTML='';else $id('pc-stats-summary').innerHTML=catEntries.map(([name,info])=>`<div class="summary-item ${statsCategoryFilter===name?'active':''}" onclick="selectStatsCategory('${escapeHtml(name)}')"><div class="summary-item-head"><div class="summary-item-name">${escapeHtml(name)}</div><div class="summary-item-time">${Math.floor(info.minutes/60)}h ${info.minutes%60}m</div></div><div class="summary-item-meta">${info.count} 次记录</div></div>`).join('')}
+  // Category list (mobile)
+  if($id('mob-cat-list')){if(!catEntries.length)$id('mob-cat-list').innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">暂无数据</div>';else $id('mob-cat-list').innerHTML=catEntries.map(([name,info])=>`<div class="mob-cat-item ${statsCategoryFilter===name?'active':''}" onclick="selectStatsCategory('${escapeHtml(name)}')"><div class="mob-cat-bar"><div class="mob-cat-name">${escapeHtml(name)}</div><div class="mob-cat-prog"><div class="mob-cat-prog-fill" style="width:${Math.round((info.minutes/maxCatMins)*100)}%"></div></div><div class="mob-cat-count">${info.count} 次</div></div><div class="mob-cat-time">${Math.floor(info.minutes/60)}h${info.minutes%60}m</div></div>`).join('')}
+  [$id('pc-heatmap-title'),$id('mob-heatmap-title')].forEach(el=>{if(el)el.textContent=`${yr} 年热力图${sfx}`});
+  renderHeatmap(yr,dayMap);renderDailyBar(dayMap);renderMonthlyBar(yr,dayMap);
+}
+function selectStatsCategory(name){
+  statsCategoryFilter=statsCategoryFilter===name?'':name;
+  [$id('pc-stats-category-filter'),$id('mob-stats-category-filter')].forEach(el=>{if(el)el.value=statsCategoryFilter});
   renderStats();
 }
-function selectStatsCategory(category) {
-  statsCategoryFilter = statsCategoryFilter === category ? '' : category;
-  const select = document.getElementById('stats-category-filter');
-  if (select) select.value = statsCategoryFilter;
-  renderStats();
+function renderHeatmap(yr,dayMap){
+  const today=new Date(),isCurrentYear=yr===today.getFullYear(),todayDate=localDateStr(today);
+  function heatLevel(m){if(!m)return 0;if(m<30)return 1;if(m<60)return 2;if(m<120)return 3;return 4}
+  const monthNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  // PC heatmap
+  const pcHM=$id('pc-heatmap');
+  if(pcHM)pcHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="heatmap-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isFuture=isCurrentYear&&ds>todayDate;const mins=(dayMap[ds]||{}).minutes||0;const lvl=isFuture?0:heatLevel(mins);const tip=isFuture?`${ds}: 未到该日期`:(mins?`${ds}: ${fmtHours(mins)}`:`${ds}: 无记录`);const isToday=ds===todayDate?'outline:2px solid var(--accent);outline-offset:1px;':'';cells.push(`<div class="heatmap-cell" data-lvl="${lvl}" style="${isToday}" title="${escapeHtml(tip)}"></div>`)}return`<div class="heatmap-row"><div class="heatmap-month-tag">${name}</div><div class="heatmap-days">${cells.join('')}</div></div>`}).join('');
+  // Mobile heatmap
+  const mHM=$id('mob-heatmap');
+  if(mHM)mHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="mob-hm-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const isFuture=isCurrentYear&&ds>todayDate;const mins=(dayMap[ds]||{}).minutes||0;const lvl=isFuture?0:heatLevel(mins);const isToday=ds===todayDate?'outline:1.5px solid var(--accent);outline-offset:1px;':'';cells.push(`<div class="mob-hm-cell" data-l="${lvl}" style="${isToday}" title="${ds}: ${mins?fmtHours(mins):'无记录'}"></div>`)}return`<div class="mob-hm-row"><div class="mob-hm-label">${name}</div><div class="mob-hm-days">${cells.join('')}</div></div>`}).join('');
 }
-
-function renderStats() {
-  const yr = statsYear;
-  const allSessions = getSessions()
-    .filter(s => s.status === 'completed')
-    .map(s => ({
-      ...s,
-      date: normalizeDateValue(s.date),
-      content_note: normalizeCategoryValue(s.content_note)
-    }));
-  const filteredSessions = statsCategoryFilter
-    ? allSessions.filter(s => s.content_note === statsCategoryFilter)
-    : allSessions;
-  const yearSessions = filteredSessions.filter(s => s.date.startsWith(String(yr)));
-
-  // Daily summary map
-  const dayMap = {};
-  filteredSessions.forEach(s => {
-    if (!s.date) return;
-    if (!dayMap[s.date]) dayMap[s.date] = { count: 0, minutes: 0 };
-    dayMap[s.date].count++;
-    dayMap[s.date].minutes += Math.floor(parseFloat(s.duration_minutes) || 0);
-  });
-
-  const summaryMap = {};
-  allSessions
-    .filter(s => s.date.startsWith(String(yr)))
-    .forEach(s => {
-      const key = s.content_note || '未分类';
-      if (!summaryMap[key]) summaryMap[key] = { minutes: 0, count: 0 };
-      summaryMap[key].minutes += Math.floor(parseFloat(s.duration_minutes) || 0);
-      summaryMap[key].count++;
-    });
-  const summaryEntries = Object.entries(summaryMap).sort((a, b) => b[1].minutes - a[1].minutes);
-  const summaryEl = document.getElementById('stats-summary');
-  if (!summaryEntries.length) {
-    summaryEl.innerHTML = '<div class="summary-item empty"><div class="summary-item-name">暂无分类数据</div><div class="summary-item-meta">先记录活动后，这里会显示全年分类汇总。</div></div>';
-  } else {
-    const categoryCards = summaryEntries.map(([name, info]) => `
-      <div class="summary-item ${statsCategoryFilter === name ? 'active' : ''}" onclick="selectStatsCategory('${escapeHtml(name)}')">
-        <div class="summary-item-head">
-          <div class="summary-item-name">${escapeHtml(name)}</div>
-          <div class="summary-item-time">${Math.floor(info.minutes / 60)}h ${info.minutes % 60}m</div>
-        </div>
-        <div class="summary-item-meta">${info.count} 次记录</div>
-      </div>
-    `).join('');
-    summaryEl.innerHTML = categoryCards;
-  }
-
-  // Summary cards
-  const totalMins = yearSessions.reduce((a,s) => a + (Math.floor(parseFloat(s.duration_minutes)||0)), 0);
-  const learnDays = [...new Set(yearSessions.map(s=>s.date).filter(d => (dayMap[d]||{}).minutes > 0))].length;
-  const avgMins   = learnDays ? Math.floor(totalMins / learnDays) : 0;
-  const streak    = calcStreakFromSessions(filteredSessions);
-  const titleSuffix = statsCategoryFilter ? ` · ${statsCategoryFilter}` : '';
-
-  document.getElementById('stats-cards').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-card-label">全年总时长${titleSuffix}</div>
-      <div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">活跃天数</div>
-      <div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">日均时长</div>
-      <div class="stat-card-value">${Math.floor(avgMins/60)}<span class="stat-card-unit">h ${avgMins%60}m</span></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-label">当前连续</div>
-      <div class="stat-card-value">${streak}<span class="stat-card-unit">天</span></div>
-    </div>
-  `;
-
-  document.getElementById('heatmap-title').textContent = `${yr} 年活动热力图${titleSuffix}`;
-  renderHeatmap(yr, dayMap);
-  renderDailyBar(dayMap);
-  renderMonthlyBar(yr, dayMap);
+function renderDailyBar(dayMap){
+  const today=new Date(),month=today.getMonth();const dim=new Date(statsYear,month+1,0).getDate();
+  const days=[];for(let d=1;d<=dim;d++)days.push(`${statsYear}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  const vals=days.map(d=>(dayMap[d]||{}).minutes||0),maxV=Math.max(...vals,1);
+  const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
+  [$id('pc-daily-chart-title'),$id('mob-daily-chart-title')].forEach(el=>{if(el)el.textContent=`${statsYear}年${month+1}月每日时长${sfx}`});
+  const html=vals.map((v,i)=>{const pct=(v/maxV)*100;const showLabel=(i===0)||((i+1)%5===0)||i===vals.length-1;return`<div class="bar-group"><div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${days[i]}: ${fmtHours(v)}" onclick="showBarDetail('daily',this)"></div><div class="bar-label">${showLabel?String(i+1):''}</div></div>`}).join('');
+  [$id('pc-bar-chart-daily'),$id('mob-bar-chart-daily')].forEach(el=>{if(el)el.innerHTML=html});
+  [$id('pc-daily-chart-detail'),$id('mob-daily-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值'});
 }
-
-function renderHeatmap(yr, dayMap) {
-  const today = new Date();
-  const isCurrentYear = yr === today.getFullYear();
-  const todayDate = localDateStr(today);
-  function heatLevel(mins) {
-    if (!mins) return 0;
-    if (mins < 30) return 1;
-    if (mins < 60) return 2;
-    if (mins < 120) return 3;
-    return 4;
-  }
-
-  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  const hm = document.getElementById('heatmap');
-  hm.innerHTML = monthNames.map((name, monthIndex) => {
-    const daysInMonth = new Date(yr, monthIndex + 1, 0).getDate();
-    const cells = [];
-    for (let day = 1; day <= 31; day++) {
-      if (day > daysInMonth) {
-        cells.push('<div class="heatmap-cell" data-future="1"></div>');
-        continue;
-      }
-      const ds = `${yr}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const isFuture = isCurrentYear && ds > todayDate;
-      const mins = (dayMap[ds] || {}).minutes || 0;
-      const lvl = isFuture ? 0 : heatLevel(mins);
-      const tip = isFuture ? `${ds}: 未到该日期` : (mins ? `${ds}: ${fmtHours(mins)}` : `${ds}: 无记录`);
-      const isToday = ds === todayDate ? 'outline:2px solid var(--accent);outline-offset:1px;' : '';
-      cells.push(`<div class="heatmap-cell" data-lvl="${lvl}" data-tip="${escapeHtml(tip)}" style="${isToday}" title="${escapeHtml(tip)}"></div>`);
-    }
-    return `<div class="heatmap-row"><div class="heatmap-month-tag">${name}</div><div class="heatmap-days">${cells.join('')}</div></div>`;
-  }).join('');
+function renderMonthlyBar(yr,dayMap){
+  const months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const vals=months.map((_,m)=>{const p=`${yr}-${String(m+1).padStart(2,'0')}`;return Object.entries(dayMap).filter(([d])=>d.startsWith(p)).reduce((a,[,v])=>a+v.minutes,0)});
+  const maxV=Math.max(...vals,1);const sfx=statsCategoryFilter?` · ${statsCategoryFilter}`:'';
+  [$id('pc-monthly-chart-title'),$id('mob-monthly-chart-title')].forEach(el=>{if(el)el.textContent=`${yr}年各月时长${sfx}`});
+  const html=vals.map((v,i)=>{const pct=(v/maxV)*100;return`<div class="bar-group"><div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)}" onclick="showBarDetail('monthly',this)"></div><div class="bar-label">${months[i].replace('月','')}</div></div>`}).join('');
+  [$id('pc-bar-chart-monthly'),$id('mob-bar-chart-monthly')].forEach(el=>{if(el)el.innerHTML=html});
+  [$id('pc-monthly-chart-detail'),$id('mob-monthly-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值'});
 }
-
-function renderDailyBar(dayMap) {
-  const today = new Date();
-  const month = statsYear === today.getFullYear() ? today.getMonth() : today.getMonth();
-  const daysInMonth = new Date(statsYear, month + 1, 0).getDate();
-  const days = [];
-  for (let day = 1; day <= daysInMonth; day++) {
-    days.push(`${statsYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
-  }
-  const vals = days.map(d => (dayMap[d] || {}).minutes || 0);
-  const maxV = Math.max(...vals, 1);
-  document.getElementById('daily-chart-title').textContent = `${statsYear}年${month + 1}月每日时长（小时）${statsCategoryFilter ? ` · ${statsCategoryFilter}` : ''}`;
-
-  const chart = document.getElementById('bar-chart-daily');
-  chart.innerHTML = vals.map((v, i) => {
-    const pct = (v / maxV) * 100;
-    const label = String(i + 1);
-    const showLabel = (i === 0) || ((i + 1) % 5 === 0) || i === vals.length - 1;
-    return `<div class="bar-group" style="min-width:0;">
-      <div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct, v > 0 ? 2 : 0)}%;" title="${days[i]}: ${fmtHours(v)}" onclick="showBarDetail('daily', this)"></div>
-      <div class="bar-label">${showLabel ? label : ''}</div>
-    </div>`;
-  }).join('');
-  document.getElementById('daily-chart-detail').textContent = '点击柱子查看具体数值';
-}
-
-function renderMonthlyBar(yr, dayMap) {
-  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  const vals = months.map((_, m) => {
-    const prefix = `${yr}-${String(m+1).padStart(2,'0')}`;
-    return Object.entries(dayMap)
-      .filter(([d]) => d.startsWith(prefix))
-      .reduce((a,[,v]) => a + v.minutes, 0);
-  });
-  const maxV = Math.max(...vals, 1);
-  const suffix = statsCategoryFilter ? ` · ${statsCategoryFilter}` : '';
-  document.getElementById('monthly-chart-title').textContent = `${yr} 各月累计时长（小时）${suffix}`;
-
-  const chart = document.getElementById('bar-chart-monthly');
-  chart.innerHTML = vals.map((v, i) => {
-    const pct = (v / maxV) * 100;
-    return `<div class="bar-group" style="min-width:0;">
-      <div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct, v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)}" onclick="showBarDetail('monthly', this)"></div>
-      <div class="bar-label">${months[i]}</div>
-    </div>`;
-  }).join('');
-  document.getElementById('monthly-chart-detail').textContent = '点击柱子查看具体数值';
-}
-
-function showBarDetail(type, element) {
-  document.querySelectorAll(`.bar-fill[data-chart="${type}"]`).forEach(el => el.classList.remove('active'));
+function showBarDetail(type,element){
+  document.querySelectorAll(`.bar-fill[data-chart="${type}"]`).forEach(el=>el.classList.remove('active'));
   element.classList.add('active');
-  const detailId = type === 'daily' ? 'daily-chart-detail' : 'monthly-chart-detail';
-  document.getElementById(detailId).textContent = `${element.dataset.label}：${element.dataset.value}`;
+  const ids=type==='daily'?['pc-daily-chart-detail','mob-daily-chart-detail']:['pc-monthly-chart-detail','mob-monthly-chart-detail'];
+  ids.forEach(id=>{const el=$id(id);if(el)el.textContent=`${element.dataset.label}：${element.dataset.value}`});
 }
 
 // ════════════════════════════════════════════════════════
 // TOAST
 // ════════════════════════════════════════════════════════
-function showToast(msg, type = '') {
-  const wrap = document.getElementById('toast-wrap');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  wrap.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+function showToast(msg,type=''){
+  const wrap=isMobile()?$id('mob-toast-wrap'):$id('pc-toast-wrap');
+  if(!wrap)return;
+  const el=document.createElement('div');
+  el.className=isMobile()?`mob-toast ${type}`:`toast-common ${type}`;
+  el.textContent=msg;wrap.appendChild(el);setTimeout(()=>el.remove(),2800);
 }
 
 // ════════════════════════════════════════════════════════
-// TAB NAVIGATION
+// LISTENERS
 // ════════════════════════════════════════════════════════
-function renderAll() {
-  renderToday();
-  renderLog();
-  renderStats();
-}
-
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab === 'log') renderLog();
-    if (btn.dataset.tab === 'stats') renderStats();
-  });
-});
-
-// Log filter listeners
-document.getElementById('filter-date').addEventListener('change', renderLog);
-document.getElementById('filter-note').addEventListener('change', renderLog);
-document.getElementById('stats-category-filter').addEventListener('change', function() {
-  statsCategoryFilter = this.value;
-  renderStats();
-});
-
-// content_note select listeners (Today tab)
-document.getElementById('content-note-sel').addEventListener('change', function() {
-  const inp = document.getElementById('content-note-input');
-  inp.style.display = this.value === '__custom__' ? '' : 'none';
-  if (this.value !== '__custom__') inp.value = '';
-});
-
-// content_note select listener (Modal)
-document.getElementById('m-note-sel').addEventListener('change', function() {
-  const inp = document.getElementById('m-note-input');
-  inp.style.display = this.value === '__custom__' ? '' : 'none';
-  if (this.value !== '__custom__') inp.value = '';
-});
-
-// Modal duration preview
-document.getElementById('m-start').addEventListener('change', updateDurationPreview);
-document.getElementById('m-end').addEventListener('change', updateDurationPreview);
-document.getElementById('m-date').addEventListener('change', updateDurationPreview);
-
-// Close modal on overlay click
-document.getElementById('add-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeAddModal();
-});
-document.getElementById('content-type-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeContentTypeManager();
-});
+$id('pc-filter-date').addEventListener('change',renderLog);
+$id('pc-filter-note').addEventListener('change',renderLog);
+$id('mob-filter-date').addEventListener('change',renderLog);
+$id('mob-filter-note').addEventListener('change',renderLog);
+$id('pc-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;renderStats()});
+$id('mob-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;renderStats()});
+$id('m-start').addEventListener('change',updateDurationPreview);
+$id('m-end').addEventListener('change',updateDurationPreview);
+$id('m-date').addEventListener('change',updateDurationPreview);
+$id('m-note-sel').addEventListener('change',function(){const inp=$id('m-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
+$id('pc-content-note-sel').addEventListener('change',function(){const inp=$id('pc-content-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
+$id('mob-content-note-sel').addEventListener('change',function(){const inp=$id('mob-content-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
+$id('pc-add-modal').addEventListener('click',function(e){if(e.target===this)closeAddModal()});
+$id('pc-content-type-modal').addEventListener('click',function(e){if(e.target===this)closeContentTypeManager()});
 
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
-function init() {
-  hydratePreferencesFromSessions();
-  refreshContentTypeUI();
-  refreshArticleTitleUI();
-  initStatsYear();
-  updateTimerUI();
-  renderAll();
+function renderAll(){
+  renderToday();
+  const pcActiveTab=document.querySelector('.pc-tab-btn.active');
+  const mobActivePage=document.querySelector('.mob-page.active');
+  if(pcActiveTab?.dataset.tab==='log'||mobActivePage?.id==='mob-page-log')renderLog();
+  if(pcActiveTab?.dataset.tab==='stats'||mobActivePage?.id==='mob-page-stats')renderStats();
 }
-
+function init(){
+  hydratePreferencesFromSessions();refreshContentTypeUI();refreshArticleTitleUI();
+  initStatsYear();updateTimerUI();renderAll();
+}
 init();
 </script>
 </body>
