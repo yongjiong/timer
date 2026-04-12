@@ -278,11 +278,15 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
 .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* PC Manager */
-.manager-list { display: flex; flex-direction: column; gap: 10px; }
-.manager-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
-.manager-actions { display: flex; gap: 6px; }
-.manager-actions button { background: var(--bg); border: 1px solid var(--border); color: var(--ink-2); border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
-.manager-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.manager-list { display: flex; flex-direction: column; gap: 8px; }
+.manager-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; cursor: default; transition: box-shadow 0.15s; }
+.manager-row.drag-over { box-shadow: 0 0 0 2px var(--accent); }
+.manager-row.dragging { opacity: 0.4; }
+.manager-drag-handle { color: var(--muted); font-size: 16px; cursor: grab; padding: 2px 4px; flex-shrink: 0; user-select: none; touch-action: none; }
+.manager-drag-handle:active { cursor: grabbing; }
+.manager-row .field-input { flex: 1; background: var(--surface); }
+.manager-del-btn { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; line-height: 1; }
+.manager-del-btn:hover { color: var(--red); background: var(--red-soft); }
 
 /* PC Toast */
 .pc-toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
@@ -487,10 +491,13 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
 
   /* ── Mobile manager ── */
   .mob-mgr-list { display: flex; flex-direction: column; gap: 8px; }
-  .mob-mgr-row { display: flex; align-items: center; gap: 8px; }
+  .mob-mgr-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; touch-action: none; }
+  .mob-mgr-row.dragging { opacity: 0.4; }
+  .mob-mgr-row.drag-over { box-shadow: 0 0 0 2px var(--accent); }
   .mob-mgr-row .field-input { flex: 1; background: var(--surface2); }
-  .mob-mgr-btns { display: flex; gap: 4px; flex-shrink: 0; }
-  .mob-mgr-btn { width: 32px; height: 32px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--ink-2); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mob-mgr-handle { font-size: 20px; color: var(--muted); cursor: grab; padding: 0 4px; flex-shrink: 0; user-select: none; touch-action: none; }
+  .mob-mgr-del { width: 32px; height: 32px; border-radius: 8px; background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mob-mgr-del:hover, .mob-mgr-del:active { color: var(--red); background: var(--red-soft); }
 
   /* ── Mobile toast ── */
   .mob-toast-wrap { position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
@@ -1050,7 +1057,7 @@ function refreshContentTypeUI(){
   });
   ['pc-stats-category-filter','mob-stats-category-filter'].forEach(id=>{
     const el=$id(id);if(!el)return;
-    const statOptions=getContentTypeOptions().filter(o=>!isRangeCategory(o));
+    const statOptions=getContentTypeOptions(); // include all, including Period
     const isSpecialFilter=statsCategoryFilter===STATS_FILTER_ALL||statsCategoryFilter===STATS_FILTER_NO_PERIOD;
     const kv=statOptions.includes(statsCategoryFilter)||isSpecialFilter?statsCategoryFilter:STATS_FILTER_ALL;
     el.innerHTML=`<option value="${STATS_FILTER_ALL}">全部分类</option><option value="${STATS_FILTER_NO_PERIOD}">不含 Period</option>`+statOptions.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
@@ -1416,7 +1423,7 @@ function parseSpeechInput(text){
 }
 
 // ════════════════════════════════════════════════════════
-// CONTENT TYPE MANAGER
+// CONTENT TYPE MANAGER  (drag-to-reorder)
 // ════════════════════════════════════════════════════════
 function openContentTypeManager(){
   renderContentTypeManager();
@@ -1428,19 +1435,98 @@ function closeContentTypeManager(){
   $id('mob-content-type-modal').classList.remove('open');
 }
 function renderContentTypeManager(values=getContentTypeOptions()){
-  const pcList=$id('pc-content-type-list'),mList=$id('mob-content-type-list');
-  const pcHTML=values.map((v,i)=>`<div class="manager-row"><input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称"><div class="manager-actions"><button onclick="moveContentTypeRow(${i},-1)">↑</button><button onclick="moveContentTypeRow(${i},1)">↓</button><button onclick="deleteContentTypeRow(${i})">删除</button></div></div>`).join('');
-  const mHTML=values.map((v,i)=>`<div class="mob-mgr-row"><input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称" style="background:var(--surface2);"><div class="mob-mgr-btns"><button class="mob-mgr-btn" onclick="moveContentTypeRow(${i},-1)">↑</button><button class="mob-mgr-btn" onclick="moveContentTypeRow(${i},1)">↓</button><button class="mob-mgr-btn" onclick="deleteContentTypeRow(${i})">✕</button></div></div>`).join('');
-  if(pcList)pcList.innerHTML=pcHTML;if(mList)mList.innerHTML=mHTML;
+  const pcList=$id('pc-content-type-list');
+  const mList=$id('mob-content-type-list');
+  if(pcList){
+    pcList.innerHTML=values.map((v,i)=>`
+      <div class="manager-row" draggable="true" data-idx="${i}">
+        <span class="manager-drag-handle" title="拖拽排序">⠿</span>
+        <input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称">
+        <button class="manager-del-btn" onclick="deleteContentTypeRowFromEl(this)" title="删除">×</button>
+      </div>`).join('');
+    initDragSort(pcList,'manager-row','pc');
+  }
+  if(mList){
+    mList.innerHTML=values.map((v,i)=>`
+      <div class="mob-mgr-row" data-idx="${i}">
+        <span class="mob-mgr-handle">⠿</span>
+        <input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称" style="background:var(--surface2);">
+        <button class="mob-mgr-del" onclick="deleteContentTypeRowFromEl(this)" title="删除">×</button>
+      </div>`).join('');
+    initTouchDragSort(mList,'mob-mgr-row');
+  }
 }
 function getContentTypeManagerValues(){
-  const active=isMobile()?'mob-content-type-list':'pc-content-type-list';
-  return Array.from(document.querySelectorAll(`#${active} input`)).map(i=>i.value.trim()).filter(Boolean);
+  // Read whichever list is currently visible
+  const pcList=$id('pc-content-type-list');
+  const mList=$id('mob-content-type-list');
+  const list=(mList&&mList.children.length)?mList:pcList;
+  if(!list)return[];
+  return Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean);
 }
-function addContentTypeRow(){const v=getContentTypeManagerValues();v.push('');renderContentTypeManager(v)}
-function moveContentTypeRow(i,d){const v=getContentTypeManagerValues(),t=i+d;if(t<0||t>=v.length)return;[v[i],v[t]]=[v[t],v[i]];renderContentTypeManager(v)}
-function deleteContentTypeRow(i){const v=getContentTypeManagerValues();v.splice(i,1);renderContentTypeManager(v)}
+function deleteContentTypeRowFromEl(btn){
+  btn.closest('.manager-row,.mob-mgr-row').remove();
+}
+function addContentTypeRow(){
+  const values=getContentTypeManagerValues();
+  values.push('');
+  renderContentTypeManager(values);
+  // Focus the new input
+  const pcList=$id('pc-content-type-list'),mList=$id('mob-content-type-list');
+  const list=isMobile()?mList:pcList;
+  if(list){const inputs=list.querySelectorAll('input');if(inputs.length)inputs[inputs.length-1].focus();}
+}
 function saveContentTypeManager(){saveContentTypeOptions(getContentTypeManagerValues());refreshContentTypeUI();closeContentTypeManager();showToast('分类已更新','success')}
+
+// ── PC: HTML5 drag-and-drop sort ──
+function initDragSort(list,rowClass,ns){
+  let dragEl=null;
+  list.querySelectorAll('.'+rowClass).forEach(row=>{
+    row.addEventListener('dragstart',e=>{dragEl=row;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    row.addEventListener('dragend',()=>{dragEl=null;list.querySelectorAll('.'+rowClass).forEach(r=>r.classList.remove('dragging','drag-over'));});
+    row.addEventListener('dragover',e=>{e.preventDefault();if(dragEl&&dragEl!==row){row.classList.add('drag-over');}});
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',e=>{e.preventDefault();row.classList.remove('drag-over');if(dragEl&&dragEl!==row){const rows=[...list.querySelectorAll('.'+rowClass)];const fromIdx=rows.indexOf(dragEl),toIdx=rows.indexOf(row);if(fromIdx<toIdx)list.insertBefore(dragEl,row.nextSibling);else list.insertBefore(dragEl,row);}});
+  });
+}
+
+// ── Mobile: touch drag sort ──
+function initTouchDragSort(list,rowClass){
+  let dragging=null,placeholder=null,startY=0,startScrollTop=0;
+  function getRows(){return[...list.querySelectorAll('.'+rowClass)];}
+  list.querySelectorAll('.mob-mgr-handle').forEach(handle=>{
+    handle.addEventListener('touchstart',e=>{
+      const row=handle.closest('.'+rowClass);
+      dragging=row;
+      startY=e.touches[0].clientY;
+      startScrollTop=list.closest('.mob-sheet-body')?.scrollTop||0;
+      placeholder=document.createElement('div');
+      placeholder.style.cssText=`height:${row.offsetHeight}px;background:var(--accent-soft);border:2px dashed var(--accent-mid);border-radius:10px;margin:0;`;
+      row.classList.add('dragging');
+      list.insertBefore(placeholder,row.nextSibling);
+      e.preventDefault();
+    },{passive:false});
+    handle.addEventListener('touchmove',e=>{
+      if(!dragging)return;
+      e.preventDefault();
+      const y=e.touches[0].clientY;
+      const rows=getRows().filter(r=>r!==dragging);
+      let inserted=false;
+      for(const r of rows){
+        const rect=r.getBoundingClientRect();
+        if(y<rect.top+rect.height/2){list.insertBefore(placeholder,r);inserted=true;break;}
+      }
+      if(!inserted)list.appendChild(placeholder);
+    },{passive:false});
+    handle.addEventListener('touchend',()=>{
+      if(!dragging)return;
+      list.insertBefore(dragging,placeholder);
+      placeholder.remove();
+      dragging.classList.remove('dragging');
+      dragging=null;placeholder=null;
+    });
+  });
+}
 
 // ════════════════════════════════════════════════════════
 // CSV
