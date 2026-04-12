@@ -243,6 +243,24 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
 .pc-bar-chart { height: 120px; }
 .heatmap-scroll { overflow-x: auto; }
 .heatmap { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
+
+/* ── Weekly Gantt Chart ── */
+.week-gantt-wrap { position: relative; }
+.week-gantt-axis { display: flex; margin-left: 36px; margin-bottom: 4px; position: relative; height: 16px; }
+.week-gantt-axis-tick { position: absolute; font-size: 9px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+.week-gantt-rows { display: flex; flex-direction: column; gap: 5px; }
+.week-gantt-row { display: flex; align-items: center; height: 26px; }
+.week-gantt-day-label { width: 36px; flex-shrink: 0; font-size: 11px; color: var(--muted); text-align: right; padding-right: 8px; }
+.week-gantt-day-label.today { color: var(--accent); font-weight: 700; }
+.week-gantt-track { flex: 1; position: relative; background: var(--surface2); border-radius: 4px; height: 100%; overflow: hidden; border: 1px solid var(--border-light); }
+.week-gantt-block { position: absolute; top: 2px; bottom: 2px; background: var(--accent); border-radius: 3px; opacity: 0.85; cursor: pointer; transition: opacity 0.15s; min-width: 2px; }
+.week-gantt-block:hover { opacity: 1; }
+.week-gantt-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,0.06); pointer-events: none; }
+.week-nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.week-nav-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px; color: var(--ink); transition: all 0.15s; }
+.week-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.week-nav-label { font-size: 13px; font-weight: 600; color: var(--ink-2); min-width: 160px; text-align: center; }
+.week-gantt-tooltip { position: fixed; background: var(--ink); color: #fff; font-size: 11px; padding: 5px 9px; border-radius: 5px; pointer-events: none; z-index: 999; white-space: nowrap; display: none; }
 .heatmap-row { display: flex; align-items: center; gap: 8px; }
 .heatmap-month-tag { width: 34px; flex: 0 0 34px; font-size: 11px; color: var(--muted); text-align: right; }
 .heatmap-days { display: flex; gap: 3px; }
@@ -584,6 +602,19 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
     <div class="period-summary-wrap" id="pc-period-summary"></div>
     <div class="pc-stats-summary" id="pc-stats-summary"></div>
     <div class="chart-wrap">
+      <div class="chart-title">本周学习时段（甘特图）</div>
+      <div class="week-nav-row" style="justify-content:space-between;">
+        <button class="week-nav-btn" onclick="changeWeek(-1)">‹ 上周</button>
+        <span class="week-nav-label" id="pc-week-heatmap-label" style="flex:1;text-align:center;"></span>
+        <button class="week-nav-btn" onclick="changeWeek(1)">下周 ›</button>
+      </div>
+      <div class="week-gantt-wrap">
+        <div class="week-gantt-axis" id="pc-gantt-axis"></div>
+        <div class="week-gantt-rows" id="pc-week-gantt"></div>
+      </div>
+      <div id="week-gantt-tooltip" class="week-gantt-tooltip"></div>
+    </div>
+    <div class="chart-wrap">
       <div class="chart-title" id="pc-heatmap-title">全年活动热力图</div>
       <div class="heatmap-scroll"><div class="heatmap" id="pc-heatmap"></div></div>
       <div class="heatmap-legend">少
@@ -885,6 +916,7 @@ let editingRecordId = null;
 let recognition = null;
 let recognitionActive = false;
 let statsCategoryFilter = STATS_FILTER_ALL;
+let weekOffset = 0; // 0 = current week, -1 = last week, etc.
 const DAILY_CHART_MAX_MINUTES = 12 * 60;
 const MONTHLY_CHART_MAX_MINUTES = 150 * 60;
 
@@ -1495,13 +1527,147 @@ function renderStats(){
   if($id('mob-cat-list')){if(!catEntries.length)$id('mob-cat-list').innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">暂无数据</div>';else $id('mob-cat-list').innerHTML=catEntries.map(([name,info])=>`<div class="mob-cat-item ${statsCategoryFilter===name?'active':''}" onclick="selectStatsCategory('${escapeHtml(name)}')"><div class="mob-cat-bar"><div class="mob-cat-name">${escapeHtml(name)}</div><div class="mob-cat-prog"><div class="mob-cat-prog-fill" style="width:${Math.round((info.minutes/maxCatMins)*100)}%"></div></div><div class="mob-cat-count">${info.count} 次</div></div><div class="mob-cat-time">${Math.floor(info.minutes/60)}h${info.minutes%60}m</div></div>`).join('')}
   [$id('pc-period-summary'),$id('mob-period-summary')].forEach(el=>{if(el){el.style.display='none';el.innerHTML='';}});
   [$id('pc-heatmap-title'),$id('mob-heatmap-title')].forEach(el=>{if(el)el.textContent=`${yr} 年计时热力图${chartSfx}`});
-  renderHeatmap(yr,chartDayMap);renderDailyBar(chartDayMap,chartSfx);renderMonthlyBar(yr,chartDayMap,chartSfx);
+  renderHeatmap(yr,chartDayMap);renderDailyBar(chartDayMap,chartSfx);renderMonthlyBar(yr,chartDayMap,chartSfx);renderWeekHourHeatmap();
 }
 function selectStatsCategory(name){
   statsCategoryFilter=statsCategoryFilter===name?STATS_FILTER_ALL:name;
   [$id('pc-stats-category-filter'),$id('mob-stats-category-filter')].forEach(el=>{if(el)el.value=statsCategoryFilter});
   renderStats();
 }
+// ════════════════════════════════════════════════════════
+// WEEKLY GANTT CHART
+// ════════════════════════════════════════════════════════
+function getWeekMonday(offset){
+  const today=new Date();
+  const dow=today.getDay()===0?7:today.getDay();
+  const monday=new Date(today);
+  monday.setDate(today.getDate()-(dow-1)+(offset*7));
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+function changeWeek(delta){
+  weekOffset+=delta;
+  renderWeekHourHeatmap();
+}
+function renderWeekHourHeatmap(){
+  const ganttEl=$id('pc-week-gantt');
+  const axisEl=$id('pc-gantt-axis');
+  const labelEl=$id('pc-week-heatmap-label');
+  const tooltip=$id('week-gantt-tooltip');
+  if(!ganttEl)return;
+
+  const monday=getWeekMonday(weekOffset);
+  const days=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(monday);
+    d.setDate(monday.getDate()+i);
+    days.push(d);
+  }
+
+  // Week label + ISO week number
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
+  function getISOWeek(d){
+    const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    const day=dt.getUTCDay()||7;
+    dt.setUTCDate(dt.getUTCDate()+4-day);
+    const yearStart=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+    return Math.ceil((((dt-yearStart)/86400000)+1)/7);
+  }
+  const wn=getISOWeek(days[0]);
+  if(labelEl)labelEl.innerHTML=`<span style="color:var(--muted);font-size:11px;font-weight:400;margin-right:6px;">第${wn}周</span>&nbsp;&nbsp;${fmt(days[0])} – ${fmt(days[6])}`;
+
+  // Time axis: 0–24h, show ticks every 3h
+  const HOURS=24;
+  if(axisEl){
+    const ticks=[];
+    for(let h=0;h<=HOURS;h+=3){
+      const pct=(h/HOURS)*100;
+      ticks.push(`<div class="week-gantt-axis-tick" style="left:${pct}%">${h===0?'0':h}时</div>`);
+    }
+    axisEl.innerHTML=ticks.join('');
+  }
+
+  // Collect sessions for this week
+  const allSessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
+  const todayStr2=localDateStr();
+  const dayStrs=days.map(d=>localDateStr(d));
+
+  // sessionsByDay[dateStr] = [{startMin, endMin, label}]
+  const sessionsByDay={};
+  dayStrs.forEach(ds=>sessionsByDay[ds]=[]);
+
+  allSessions.forEach(s=>{
+    const start=s.start_time?toFullTime(s.start_time):'';
+    const end=s.end_time?toFullTime(s.end_time):'';
+    if(!s.date||!start||!end)return;
+    const range=resolveRange(s.date,start,end,!!s.cross_day);
+    // A session may span into next day
+    const startDate=normalizeDateValue(s.date);
+    const endDate=localDateStr(range.end);
+
+    // For each day in the week that this session touches
+    dayStrs.forEach(ds=>{
+      const dayStart=new Date(ds+'T00:00:00');
+      const dayEnd=new Date(ds+'T00:00:00');
+      dayEnd.setDate(dayEnd.getDate()+1);
+      const overlapStart=Math.max(range.start.getTime(),dayStart.getTime());
+      const overlapEnd=Math.min(range.end.getTime(),dayEnd.getTime());
+      if(overlapEnd>overlapStart){
+        const startMin=(overlapStart-dayStart.getTime())/60000;
+        const endMin=(overlapEnd-dayStart.getTime())/60000;
+        const label=`${s.content_note||''}${s.article_title?' · '+s.article_title:''} ${start.slice(0,5)}–${end.slice(0,5)} (${fmtMinutes(Math.round(endMin-startMin))})`;
+        sessionsByDay[ds].push({startMin,endMin,label});
+      }
+    });
+  });
+
+  const dayNames=['一','二','三','四','五','六','日'];
+  const TOTAL_MINS=HOURS*60;
+
+  const rows=days.map((d,di)=>{
+    const ds=localDateStr(d);
+    const isToday=ds===todayStr2;
+    const segs=sessionsByDay[ds]||[];
+
+    // Grid lines every 3h
+    const gridLines=[];
+    for(let h=3;h<HOURS;h+=3){
+      const pct=(h/HOURS)*100;
+      gridLines.push(`<div class="week-gantt-grid-line" style="left:${pct}%"></div>`);
+    }
+
+    const blocks=segs.map(seg=>{
+      const left=(seg.startMin/TOTAL_MINS)*100;
+      const width=Math.max(((seg.endMin-seg.startMin)/TOTAL_MINS)*100,0.3);
+      return`<div class="week-gantt-block" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%" data-tip="${escapeHtml(seg.label)}" onmouseenter="showGanttTip(event,this)" onmouseleave="hideGanttTip()"></div>`;
+    }).join('');
+
+    return`<div class="week-gantt-row">
+      <div class="week-gantt-day-label${isToday?' today':''}">周${dayNames[di]}<br><span style="font-size:9px;opacity:0.7">${fmt(d)}</span></div>
+      <div class="week-gantt-track">${gridLines.join('')}${blocks}</div>
+    </div>`;
+  }).join('');
+
+  ganttEl.innerHTML=rows;
+
+  // Tooltip handlers (attach to tooltip element)
+  if(tooltip){
+    tooltip.style.display='none';
+  }
+}
+function showGanttTip(e,el){
+  const tip=$id('week-gantt-tooltip');
+  if(!tip)return;
+  tip.textContent=el.dataset.tip;
+  tip.style.display='block';
+  tip.style.left=(e.clientX+12)+'px';
+  tip.style.top=(e.clientY-28)+'px';
+}
+function hideGanttTip(){
+  const tip=$id('week-gantt-tooltip');
+  if(tip)tip.style.display='none';
+}
+
 function renderHeatmap(yr,dayMap){
   const today=new Date(),isCurrentYear=yr===today.getFullYear(),todayDate=localDateStr(today);
   function heatLevel(m){if(!m)return 0;if(m<30)return 1;if(m<60)return 2;if(m<120)return 3;return 4}
