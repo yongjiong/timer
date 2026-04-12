@@ -1481,7 +1481,7 @@ function renderStats(){
   const avgMins=learnDays?Math.floor(totalMins/learnDays):0;
   const streak=calcStreakFromSessions(filteredSessions);
   const sfx=isCategoryFilter?` · ${statsCategoryFilter}`:'';
-  const chartSfx=isCategoryFilter?sfx:(isAllFilter&&periodSessions.length?' · 全部分类（含 Period）':' · 全部分类（不含 Period）');
+  const chartSfx=isCategoryFilter?sfx:'';
   // PC stats cards
   if($id('pc-stats-cards'))$id('pc-stats-cards').innerHTML=`<div class="stat-card"><div class="stat-card-label">全年总时长${sfx}</div><div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">活跃天数</div><div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div></div><div class="stat-card"><div class="stat-card-label">日均时长</div><div class="stat-card-value">${Math.floor(avgMins/60)}<span class="stat-card-unit">h ${avgMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">当前连续</div><div class="stat-card-value">${streak}<span class="stat-card-unit">天</span></div></div>`;
   // Mobile stats cards
