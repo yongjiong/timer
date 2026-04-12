@@ -345,7 +345,7 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
   .mob-hero { padding: 24px 16px 16px; background: linear-gradient(180deg, rgba(58,110,168,0.05) 0%, transparent 100%); }
   .mob-date { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; font-family: 'DM Mono', monospace; margin-bottom: 16px; }
 
-  .mob-stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 20px; }
+  .mob-stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
   .mob-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 10px; text-align: center; }
   .mob-stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 4px; }
   .mob-stat-val { font-size: 20px; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; line-height: 1; }
@@ -381,6 +381,7 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
   .mob-rec-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
   .mob-rec-title { font-size: 12px; color: var(--ink-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mob-rec-edit { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; color: var(--muted); font-size: 12px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+  .mob-rec-del { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; color: var(--red); font-size: 12px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
 
   /* ── Mobile page header ── */
   .mob-page-hd { padding: 22px 16px 14px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
@@ -624,6 +625,10 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
         <div class="legend-cell" style="background:var(--heat-3)"></div>
         <div class="legend-cell" style="background:var(--heat-4)"></div>多
       </div>
+      <div id="pc-heatmap-day-detail" style="display:none;margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border-light);">
+        <div style="font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:8px;" id="pc-heatmap-day-title"></div>
+        <div id="pc-heatmap-day-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
     </div>
     <div class="chart-wrap">
       <div class="chart-title" id="pc-daily-chart-title">当月每日时长</div>
@@ -770,6 +775,8 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
       <div class="mob-action-chips">
         <button class="mob-action-chip prim" onclick="openAddModal()">＋ 手动补录</button>
         <button class="mob-action-chip prim" onclick="openVoiceAddModal()">🎤 语音补录</button>
+        <button class="mob-action-chip" onclick="exportCSV()">↓ 导出 CSV</button>
+        <label class="mob-action-chip" style="cursor:pointer;">↑ 导入 CSV<input type="file" accept=".csv" style="display:none;" onchange="importCSV(event)"></label>
       </div>
       <div class="mob-log-list" id="mob-log-list">
         <div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>
@@ -903,7 +910,7 @@ const STORAGE_KEY = 'english_sessions';
 const ACTIVE_KEY  = 'english_active_session';
 const CONTENT_TYPE_KEY = 'english_content_types';
 const ARTICLE_TITLES_KEY = 'english_article_titles';
-const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习','Period'];
+const DEFAULT_CONTENT_NOTE_OPTIONS = ['英语学习','网球','Period'];
 const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
 const STATS_FILTER_ALL = '';
 const STATS_FILTER_NO_PERIOD = '__exclude_period__';
@@ -1216,25 +1223,31 @@ function renderToday(){
   if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${formatRecordPrimary(s)}</span><span class="record-duration">${formatRecordDuration(s)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button></div></div>`).join('');}}
   // Mobile recent
   const mobList=$id('mob-recent-list');
-  if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${formatRecordDuration(s)}</div><div class="mob-rec-meta">${formatRecordPrimary(s)}${isRangeRecord(s)?'':' · '+s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button></div>`).join('');}}
+  if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${formatRecordDuration(s)}</div><div class="mob-rec-meta">${formatRecordPrimary(s)}${isRangeRecord(s)?'':' · '+s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<div style="display:flex;gap:6px;flex-shrink:0;"><button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-rec-del" onclick="deleteRecord('${s.id}')">✕</button></div></div>`).join('');}}
 }
 
 // ════════════════════════════════════════════════════════
 // RENDER LOG
 // ════════════════════════════════════════════════════════
 function renderLog(){
-  let sessions=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>(b.date+b.start_time).localeCompare(a.date+a.start_time));
-  const fDate=isMobile()?($id('mob-filter-date')||{}).value:($id('pc-filter-date')||{}).value;
-  const fNote=isMobile()?($id('mob-filter-note')||{}).value:($id('pc-filter-note')||{}).value;
-  if(fDate)sessions=sessions.filter(s=>s.date===fDate);
-  if(fNote)sessions=sessions.filter(s=>s.content_note===fNote);
+  const allSessions=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>(b.date+b.start_time).localeCompare(a.date+a.start_time));
   updateMobileDateFilterChip();
-  // PC table
+  // PC table — uses PC filters
+  const pcFDate=($id('pc-filter-date')||{}).value||'';
+  const pcFNote=($id('pc-filter-note')||{}).value||'';
+  let pcSessions=allSessions;
+  if(pcFDate)pcSessions=pcSessions.filter(s=>s.date===pcFDate);
+  if(pcFNote)pcSessions=pcSessions.filter(s=>s.content_note===pcFNote);
   const tbody=$id('pc-log-tbody');
-  if(tbody){if(!sessions.length){tbody.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';}else{tbody.innerHTML=sessions.map(s=>`<tr><td class="td-muted td-mono">${escapeHtml(s.date)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?'—':s.start_time)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?(s.end_date||s.date):displayEndTime(s))}</td><td class="td-mono" style="font-weight:600;">${escapeHtml(formatRecordDuration(s))}</td><td>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:'<span class="td-muted">—</span>'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'—')}</td><td><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></td></tr>`).join('');}}
-  // Mobile list
+  if(tbody){if(!pcSessions.length){tbody.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';}else{tbody.innerHTML=pcSessions.map(s=>`<tr><td class="td-muted td-mono">${escapeHtml(s.date)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?'—':s.start_time)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?(s.end_date||s.date):displayEndTime(s))}</td><td class="td-mono" style="font-weight:600;">${escapeHtml(formatRecordDuration(s))}</td><td>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:'<span class="td-muted">—</span>'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'—')}</td><td><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></td></tr>`).join('');}}
+  // Mobile list — uses mobile filters independently
+  const mobFDate=($id('mob-filter-date')||{}).value||'';
+  const mobFNote=($id('mob-filter-note')||{}).value||'';
+  let mobSessions=allSessions;
+  if(mobFDate)mobSessions=mobSessions.filter(s=>s.date===mobFDate);
+  if(mobFNote)mobSessions=mobSessions.filter(s=>s.content_note===mobFNote);
   const mlist=$id('mob-log-list');
-  if(mlist){if(!sessions.length){mlist.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mlist.innerHTML=sessions.map(s=>`<div class="mob-log-item"><div class="mob-log-date"><div class="mob-log-day">${s.date.slice(8)}</div><div class="mob-log-mon">${s.date.slice(5,7)}月</div></div><div class="mob-log-detail"><div class="mob-log-times">${isRangeRecord(s)?formatRecordRange(s):`${s.start_time.slice(0,5)} – ${displayEndTime(s)}`}${s.content_note?' · '+escapeHtml(s.content_note):''}</div><div class="mob-log-article">${escapeHtml(s.article_title||'—')}</div></div><div class="mob-log-right"><div class="mob-log-dur">${formatRecordDuration(s)}</div><div class="mob-log-btns"><button class="mob-log-btn" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-log-btn" onclick="deleteRecord('${s.id}')" style="color:var(--red);">✕</button></div></div></div>`).join('');}}
+  if(mlist){if(!mobSessions.length){mlist.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mlist.innerHTML=mobSessions.map(s=>`<div class="mob-log-item"><div class="mob-log-date"><div class="mob-log-day">${s.date.slice(8)}</div><div class="mob-log-mon">${s.date.slice(5,7)}月</div></div><div class="mob-log-detail"><div class="mob-log-times">${isRangeRecord(s)?formatRecordRange(s):`${s.start_time.slice(0,5)} – ${displayEndTime(s)}`}${s.content_note?' · '+escapeHtml(s.content_note):''}</div><div class="mob-log-article">${escapeHtml(s.article_title||'—')}</div></div><div class="mob-log-right"><div class="mob-log-dur">${formatRecordDuration(s)}</div><div class="mob-log-btns"><button class="mob-log-btn" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-log-btn" onclick="deleteRecord('${s.id}')" style="color:var(--red);">✕</button></div></div></div>`).join('');}}
 }
 
 function deleteRecord(id){
@@ -1553,6 +1566,9 @@ function renderWeekHourHeatmap(){
   const labelEl=$id('pc-week-heatmap-label');
   const tooltip=$id('week-gantt-tooltip');
   if(!ganttEl)return;
+  // Clear old legend
+  const oldLegend=$id('pc-gantt-legend');
+  if(oldLegend)oldLegend.remove();
 
   const monday=getWeekMonday(weekOffset);
   const days=[];
@@ -1585,12 +1601,19 @@ function renderWeekHourHeatmap(){
     axisEl.innerHTML=ticks.join('');
   }
 
+  // Category → color palette (fixed colors for known types, auto-assign for others)
+  const CATEGORY_COLORS=['#3A6EA8','#2E7D52','#8B5CF6','#D97706','#DC2626','#0891B2','#BE185D','#65A30D'];
+  const colorMap={};
+  const cats=getContentTypeOptions().filter(c=>!isRangeCategory(c));
+  cats.forEach((c,i)=>{colorMap[c]=CATEGORY_COLORS[i%CATEGORY_COLORS.length]});
+  function getCatColor(note){return note&&colorMap[note]?colorMap[note]:'#94A3B8';}
+
   // Collect sessions for this week
   const allSessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
   const todayStr2=localDateStr();
   const dayStrs=days.map(d=>localDateStr(d));
 
-  // sessionsByDay[dateStr] = [{startMin, endMin, label}]
+  // sessionsByDay[dateStr] = [{startMin, endMin, label, color}]
   const sessionsByDay={};
   dayStrs.forEach(ds=>sessionsByDay[ds]=[]);
 
@@ -1599,11 +1622,6 @@ function renderWeekHourHeatmap(){
     const end=s.end_time?toFullTime(s.end_time):'';
     if(!s.date||!start||!end)return;
     const range=resolveRange(s.date,start,end,!!s.cross_day);
-    // A session may span into next day
-    const startDate=normalizeDateValue(s.date);
-    const endDate=localDateStr(range.end);
-
-    // For each day in the week that this session touches
     dayStrs.forEach(ds=>{
       const dayStart=new Date(ds+'T00:00:00');
       const dayEnd=new Date(ds+'T00:00:00');
@@ -1613,8 +1631,9 @@ function renderWeekHourHeatmap(){
       if(overlapEnd>overlapStart){
         const startMin=(overlapStart-dayStart.getTime())/60000;
         const endMin=(overlapEnd-dayStart.getTime())/60000;
-        const label=`${s.content_note||''}${s.article_title?' · '+s.article_title:''} ${start.slice(0,5)}–${end.slice(0,5)} (${fmtMinutes(Math.round(endMin-startMin))})`;
-        sessionsByDay[ds].push({startMin,endMin,label});
+        const note=normalizeCategoryValue(s.content_note||'');
+        const label=`${note||'未分类'}${s.article_title?' · '+s.article_title:''} ${start.slice(0,5)}–${end.slice(0,5)} (${fmtMinutes(Math.round(endMin-startMin))})`;
+        sessionsByDay[ds].push({startMin,endMin,label,color:getCatColor(note)});
       }
     });
   });
@@ -1637,7 +1656,7 @@ function renderWeekHourHeatmap(){
     const blocks=segs.map(seg=>{
       const left=(seg.startMin/TOTAL_MINS)*100;
       const width=Math.max(((seg.endMin-seg.startMin)/TOTAL_MINS)*100,0.3);
-      return`<div class="week-gantt-block" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%" data-tip="${escapeHtml(seg.label)}" onmouseenter="showGanttTip(event,this)" onmouseleave="hideGanttTip()"></div>`;
+      return`<div class="week-gantt-block" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%;background:${seg.color}" data-tip="${escapeHtml(seg.label)}" onmouseenter="showGanttTip(event,this)" onmouseleave="hideGanttTip()"></div>`;
     }).join('');
 
     return`<div class="week-gantt-row">
@@ -1648,10 +1667,18 @@ function renderWeekHourHeatmap(){
 
   ganttEl.innerHTML=rows;
 
-  // Tooltip handlers (attach to tooltip element)
-  if(tooltip){
-    tooltip.style.display='none';
+  // Render color legend below chart
+  const usedCats=[...new Set(Object.values(sessionsByDay).flat().map(s=>s.label.split(' ·')[0].split(' ')[0]))];
+  const legendCats=cats.filter(c=>Object.values(sessionsByDay).flat().some(seg=>seg.color===getCatColor(c)));
+  let legendHtml='';
+  if(legendCats.length){
+    legendHtml=`<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">`
+      +legendCats.map(c=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-2);">
+        <div style="width:12px;height:12px;border-radius:2px;background:${getCatColor(c)};flex-shrink:0;"></div>${escapeHtml(c)}</div>`).join('')
+      +`</div>`;
   }
+  // append legend after rows
+  ganttEl.insertAdjacentHTML('afterend', legendHtml ? `<div id="pc-gantt-legend">${legendHtml}</div>` : '');
 }
 function showGanttTip(e,el){
   const tip=$id('week-gantt-tooltip');
@@ -1670,12 +1697,36 @@ function renderHeatmap(yr,dayMap){
   const today=new Date(),isCurrentYear=yr===today.getFullYear(),todayDate=localDateStr(today);
   function heatLevel(m){if(!m)return 0;if(m<30)return 1;if(m<60)return 2;if(m<120)return 3;return 4}
   const monthNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  // PC heatmap
+  // PC heatmap — cells are clickable
   const pcHM=$id('pc-heatmap');
-  if(pcHM)pcHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="heatmap-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const mins=(dayMap[ds]||{}).minutes||0;const isFuture=isCurrentYear&&ds>todayDate;const lvl=heatLevel(mins);const tip=mins?`${ds}: ${fmtHours(mins)}`:(isFuture?`${ds}: 未到该日期`:`${ds}: 无记录`);const isToday=ds===todayDate?'outline:2px solid var(--accent);outline-offset:1px;':'';cells.push(`<div class="heatmap-cell" data-lvl="${lvl}" style="${isToday}" title="${escapeHtml(tip)}"></div>`)}return`<div class="heatmap-row"><div class="heatmap-month-tag">${name}</div><div class="heatmap-days">${cells.join('')}</div></div>`}).join('');
-  // Mobile heatmap
+  if(pcHM)pcHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="heatmap-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const mins=(dayMap[ds]||{}).minutes||0;const isFuture=isCurrentYear&&ds>todayDate;const lvl=heatLevel(mins);const tip=mins?`${ds}: ${fmtHours(mins)}`:(isFuture?`${ds}: 未到该日期`:`${ds}: 无记录`);const isToday=ds===todayDate?'outline:2px solid var(--accent);outline-offset:1px;':'';const clickable=!isFuture?`onclick="showHeatmapDayDetail('${ds}')" style="${isToday}cursor:pointer;" `:`style="${isToday}"`;cells.push(`<div class="heatmap-cell" data-lvl="${lvl}" ${clickable}title="${escapeHtml(tip)}"></div>`)}return`<div class="heatmap-row"><div class="heatmap-month-tag">${name}</div><div class="heatmap-days">${cells.join('')}</div></div>`}).join('');
+  // Mobile heatmap — tooltip only (cells too small to click comfortably)
   const mHM=$id('mob-heatmap');
   if(mHM)mHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="mob-hm-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const mins=(dayMap[ds]||{}).minutes||0;const isFuture=isCurrentYear&&ds>todayDate;const lvl=heatLevel(mins);const isToday=ds===todayDate?'outline:1.5px solid var(--accent);outline-offset:1px;':'';const tip=mins?`${ds}: ${fmtHours(mins)}`:(isFuture?`${ds}: 未到该日期`:`${ds}: 无记录`);cells.push(`<div class="mob-hm-cell" data-l="${lvl}" style="${isToday}" title="${escapeHtml(tip)}"></div>`)}return`<div class="mob-hm-row"><div class="mob-hm-label">${name}</div><div class="mob-hm-days">${cells.join('')}</div></div>`}).join('');
+}
+function showHeatmapDayDetail(ds){
+  const panel=$id('pc-heatmap-day-detail');
+  const titleEl=$id('pc-heatmap-day-title');
+  const listEl=$id('pc-heatmap-day-list');
+  if(!panel||!titleEl||!listEl)return;
+  // If clicking same date again, toggle off
+  if(panel.dataset.activeDate===ds&&panel.style.display!=='none'){panel.style.display='none';panel.dataset.activeDate='';return}
+  panel.dataset.activeDate=ds;
+  const sessions=getSessions().filter(s=>s.status==='completed'&&normalizeDateValue(s.date)===ds&&!isRangeRecord(s)).sort((a,b)=>a.start_time.localeCompare(b.start_time));
+  titleEl.textContent=`${ds} 的学习记录`;
+  if(!sessions.length){
+    listEl.innerHTML='<div style="font-size:12px;color:var(--muted);">当天无学习记录</div>';
+  } else {
+    listEl.innerHTML=sessions.map(s=>`<div style="display:flex;align-items:center;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border-light);">
+      <span style="color:var(--muted);font-family:'DM Mono',monospace;min-width:110px;">${s.start_time.slice(0,5)} – ${displayEndTime(s)}</span>
+      <span style="font-weight:600;min-width:50px;">${fmtMinutes(s.duration_minutes)}</span>
+      ${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}
+      <span style="color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'')}</span>
+    </div>`).join('')
+    +`<div style="font-size:11px;color:var(--muted);margin-top:6px;">共 ${sessions.length} 条 · 合计 ${fmtMinutes(sessions.reduce((a,s)=>a+s.duration_minutes,0))}</div>`;
+  }
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function renderDailyBar(dayMap,titleSuffix=''){
   const today=new Date(),month=today.getMonth();const dim=new Date(statsYear,month+1,0).getDate();
