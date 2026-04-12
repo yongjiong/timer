@@ -581,23 +581,23 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
     <div class="modal-body">
       <div class="voice-status" id="pc-voice-status"></div>
       <button class="voice-btn-pc" id="pc-voice-btn" onclick="startVoiceFill()">🎤 <span id="pc-voice-btn-text">点击语音录入</span></button>
-      <div class="field-group"><label class="field-label">日期 *</label><input type="date" class="field-input" id="m-date"></div>
+      <div class="field-group"><label class="field-label">日期 *</label><input type="date" class="field-input" id="pc-m-date"></div>
       <div class="modal-row">
-        <div class="field-group"><label class="field-label">开始时间 *</label><input type="time" step="1" class="field-input" id="m-start"></div>
-        <div class="field-group"><label class="field-label">结束时间 *</label><input type="time" step="1" class="field-input" id="m-end"></div>
+        <div class="field-group"><label class="field-label">开始时间 *</label><input type="time" step="1" class="field-input" id="pc-m-start"></div>
+        <div class="field-group"><label class="field-label">结束时间 *</label><input type="time" step="1" class="field-input" id="pc-m-end"></div>
       </div>
       <div class="modal-row">
         <div class="field-group">
           <label class="field-label">活动分类</label>
           <div class="field-inline">
-            <select class="field-select" id="m-note-sel"></select>
+            <select class="field-select" id="pc-m-note-sel"></select>
             <div class="inline-actions"><button class="btn btn-secondary" onclick="openContentTypeManager()">编辑</button></div>
           </div>
-          <input class="field-input" id="m-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
+          <input class="field-input" id="pc-m-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
         </div>
-        <div class="field-group"><label class="field-label">事项名称</label><input type="text" class="field-input" id="m-article" list="article-title-options"></div>
+        <div class="field-group"><label class="field-label">事项名称</label><input type="text" class="field-input" id="pc-m-article" list="article-title-options"></div>
       </div>
-      <div id="m-duration-preview" style="font-size:12px;color:var(--muted);"></div>
+      <div id="pc-m-duration-preview" style="font-size:12px;color:var(--muted);"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeAddModal()">取消</button>
@@ -762,21 +762,21 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
       <button class="mob-voice-btn" id="mob-voice-btn" onclick="startVoiceFill()">
         <span id="mob-voice-btn-icon">🎤</span><span id="mob-voice-btn-text">点击开始语音录入</span>
       </button>
-      <div class="mob-field-wrap"><div class="mob-field-lbl">日期 *</div><input type="date" class="field-input" id="m-date" style="background:var(--surface2);"></div>
+      <div class="mob-field-wrap"><div class="mob-field-lbl">日期 *</div><input type="date" class="field-input" id="mob-m-date" style="background:var(--surface2);"></div>
       <div class="mob-sheet-row">
-        <div class="mob-field-wrap"><div class="mob-field-lbl">开始时间 *</div><input type="time" step="1" class="field-input" id="m-start" style="background:var(--surface2);"></div>
-        <div class="mob-field-wrap"><div class="mob-field-lbl">结束时间 *</div><input type="time" step="1" class="field-input" id="m-end" style="background:var(--surface2);"></div>
+        <div class="mob-field-wrap"><div class="mob-field-lbl">开始时间 *</div><input type="time" step="1" class="field-input" id="mob-m-start" style="background:var(--surface2);"></div>
+        <div class="mob-field-wrap"><div class="mob-field-lbl">结束时间 *</div><input type="time" step="1" class="field-input" id="mob-m-end" style="background:var(--surface2);"></div>
       </div>
-      <div class="mob-dur-preview" id="m-duration-preview"></div>
+      <div class="mob-dur-preview" id="mob-m-duration-preview"></div>
       <div class="mob-field-wrap">
         <div class="mob-field-lbl">活动分类</div>
         <div class="mob-field-row">
-          <select class="field-select" id="m-note-sel" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;"></select>
+          <select class="field-select" id="mob-m-note-sel" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;"></select>
           <button class="mob-edit-btn" onclick="openContentTypeManager()">编辑</button>
         </div>
-        <input class="field-input" id="m-note-input" placeholder="输入活动分类" style="display:none;margin-top:8px;background:var(--surface2);">
+        <input class="field-input" id="mob-m-note-input" placeholder="输入活动分类" style="display:none;margin-top:8px;background:var(--surface2);">
       </div>
-      <div class="mob-field-wrap"><div class="mob-field-lbl">事项名称</div><input type="text" class="field-input" id="m-article" list="article-title-options" placeholder="可选" style="background:var(--surface2);padding:11px 12px;font-size:14px;"></div>
+      <div class="mob-field-wrap"><div class="mob-field-lbl">事项名称</div><input type="text" class="field-input" id="mob-m-article" list="article-title-options" placeholder="可选" style="background:var(--surface2);padding:11px 12px;font-size:14px;"></div>
     </div>
     <div class="mob-sheet-footer">
       <button class="mob-btn-cta mob-btn-stop" style="flex:0;padding:12px 18px;" onclick="closeAddModal()">取消</button>
@@ -868,6 +868,15 @@ function toInputTime(v){return v?v.slice(0,5):''}
 // UI HELPERS — dual target (PC + mobile selectors)
 // ════════════════════════════════════════════════════════
 function $id(id){return document.getElementById(id)}
+function getModalRootByMode(mobile=isMobile()){return mobile?$id('mob-add-modal'):$id('pc-add-modal')}
+function getActiveModalRoot(){return getModalRootByMode()}
+function modalFieldId(name,root=getActiveModalRoot()){
+  if(!root)return'';
+  const prefix=root.id==='mob-add-modal'?'mob':'pc';
+  return `${prefix}-${name}`;
+}
+function modalField(name,root=getActiveModalRoot()){const id=modalFieldId(name,root);return id?$id(id):null}
+function forEachModalRoot(fn){[getModalRootByMode(false),getModalRootByMode(true)].forEach(root=>{if(root)fn(root)})}
 function renderContentTypeSelect(selectId,label='请选择',empty='',keep=''){
   const sel=$id(selectId);if(!sel)return;
   const cur=keep||sel.value,opts=getContentTypeOptions();
@@ -876,10 +885,22 @@ function renderContentTypeSelect(selectId,label='请选择',empty='',keep=''){
   else if(cur)sel.value='__custom__';
   else sel.value=empty;
 }
+function renderModalContentTypeSelects(){
+  const opts=getContentTypeOptions();
+  forEachModalRoot(root=>{
+    const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root);
+    if(!sel)return;
+    const cur=(inp&&inp.style.display!=='none'&&inp.value.trim())?inp.value.trim():sel.value;
+    sel.innerHTML='<option value="">请选择</option>'+opts.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')+'<option value="__custom__">自定义…</option>';
+    if(cur&&opts.includes(cur)){sel.value=cur;if(inp){inp.value='';inp.style.display='none'}}
+    else if(cur){sel.value='__custom__';if(inp){inp.value=cur;inp.style.display=''}}
+    else{sel.value='';if(inp){inp.value='';inp.style.display='none'}}
+  });
+}
 function refreshContentTypeUI(){
   renderContentTypeSelect('pc-content-note-sel','请选择或输入');
   renderContentTypeSelect('mob-content-note-sel','请选择或输入');
-  renderContentTypeSelect('m-note-sel','请选择');
+  renderModalContentTypeSelects();
   ['pc-filter-note','mob-filter-note'].forEach(id=>{
     const el=$id(id);if(!el)return;const cur=el.value;
     el.innerHTML='<option value="">全部类型</option>'+getContentTypeOptions().map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
@@ -1070,27 +1091,34 @@ function deleteRecord(id){
 // ════════════════════════════════════════════════════════
 // MODAL / SHEET
 // ════════════════════════════════════════════════════════
-function setModalContentNote(v){
-  const sel=$id('m-note-sel'),inp=$id('m-note-input'),opts=getContentTypeOptions();
+function setModalContentNote(v,root=getActiveModalRoot()){
+  const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root),opts=getContentTypeOptions();
+  if(!sel||!inp)return;
   if(opts.includes(v)){sel.value=v;inp.value='';inp.style.display='none'}
   else if(v){sel.value='__custom__';inp.value=v;inp.style.display=''}
   else{sel.value='';inp.value='';inp.style.display='none'}
 }
-function getModalContentNote(){const s=$id('m-note-sel').value,i=$id('m-note-input').value.trim();return normalizeCategoryValue(s==='__custom__'?i:s)}
+function getModalContentNote(root=getActiveModalRoot()){
+  const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root);
+  if(!sel||!inp)return'';
+  return normalizeCategoryValue(sel.value==='__custom__'?inp.value.trim():sel.value);
+}
 
 function openAddModal(recordId=null){
+  const root=getActiveModalRoot();
   editingRecordId=recordId;
   const record=recordId?getSessions().find(s=>s.id===recordId):null;
   const titleText=record?'编辑记录':'手动补录';
   const saveText=record?'保存修改':'保存';
   [$id('pc-modal-title'),$id('mob-modal-title')].forEach(el=>{if(el)el.textContent=titleText});
   [$id('modal-save-btn'),$id('mob-modal-save-btn')].forEach(el=>{if(el)el.textContent=saveText});
-  $id('m-date').value=record?.date||todayStr();
-  $id('m-start').value=toInputTime(record?.start_time||'');
-  $id('m-end').value=toInputTime(record?.end_time||'');
-  setModalContentNote(record?.content_note||'');
-  $id('m-article').value=record?.article_title||'';
-  setVoiceStatus('');resetVoiceBtn();updateDurationPreview();
+  const dateField=modalField('m-date',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
+  if(dateField)dateField.value=record?.date||todayStr();
+  if(startField)startField.value=toInputTime(record?.start_time||'');
+  if(endField)endField.value=toInputTime(record?.end_time||'');
+  setModalContentNote(record?.content_note||'',root);
+  if(articleField)articleField.value=record?.article_title||'';
+  setVoiceStatus('');resetVoiceBtn();updateDurationPreview(root);
   if(isMobile())$id('mob-add-modal').classList.add('open');
   else $id('pc-add-modal').classList.add('open');
 }
@@ -1103,8 +1131,10 @@ function closeAddModal(){
 }
 
 function saveManualRecord(){
-  const date=normalizeDateValue($id('m-date').value),start=$id('m-start').value,end=$id('m-end').value;
-  const note=getModalContentNote(),article=$id('m-article').value.trim();
+  const root=getActiveModalRoot();
+  const dateField=modalField('m-date',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
+  const date=normalizeDateValue(dateField?.value||''),start=startField?.value||'',end=endField?.value||'';
+  const note=getModalContentNote(root),article=(articleField?.value||'').trim();
   if(!date||!start||!end){showToast('日期、开始和结束时间为必填','error');return}
   const sf=toFullTime(start),ef=toFullTime(end),dur=diffMinutesFloor(timeStrToDate(date,sf),timeStrToDate(date,ef));
   if(dur<0){showToast('结束时间不能早于开始时间','error');return}
@@ -1116,8 +1146,9 @@ function saveManualRecord(){
   showToast(isEditing?'修改已保存':'补录成功','success');
 }
 
-function updateDurationPreview(){
-  const date=$id('m-date').value,start=$id('m-start').value,end=$id('m-end').value,el=$id('m-duration-preview');
+function updateDurationPreview(root=getActiveModalRoot()){
+  const date=modalField('m-date',root)?.value||'',start=modalField('m-start',root)?.value||'',end=modalField('m-end',root)?.value||'',el=modalField('m-duration-preview',root);
+  if(!el)return;
   if(!date||!start||!end){el.textContent='';return}
   const d=diffMinutesFloor(timeStrToDate(date,start+':00'),timeStrToDate(date,end+':00'));
   el.textContent=d>=0?`预计时长：${d} 分钟`:'⚠ 结束时间早于开始时间';
@@ -1156,13 +1187,14 @@ function startVoiceFill(){
   recognitionActive=true;recognition.start();
 }
 function applySpeechToModal(text){
+  const root=getActiveModalRoot();
   const parsed=parseSpeechInput(text);
-  if(parsed.date)$id('m-date').value=parsed.date;
-  if(parsed.start)$id('m-start').value=parsed.start;
-  if(parsed.end)$id('m-end').value=parsed.end;
-  if(parsed.note)setModalContentNote(parsed.note);
-  if(parsed.article)$id('m-article').value=parsed.article;
-  updateDurationPreview();setVoiceStatus(`已识别：${text}`);showToast('语音已填入','success');
+  if(parsed.date&&modalField('m-date',root))modalField('m-date',root).value=parsed.date;
+  if(parsed.start&&modalField('m-start',root))modalField('m-start',root).value=parsed.start;
+  if(parsed.end&&modalField('m-end',root))modalField('m-end',root).value=parsed.end;
+  if(parsed.note)setModalContentNote(parsed.note,root);
+  if(parsed.article&&modalField('m-article',root))modalField('m-article',root).value=parsed.article;
+  updateDurationPreview(root);setVoiceStatus(`已识别：${text}`);showToast('语音已填入','success');
 }
 function parseSpeechInput(text){
   const raw=String(text||'').replace(/[，。；、]/g,' ').replace(/\s+/g,' ').trim();
@@ -1346,10 +1378,14 @@ $id('mob-filter-date').addEventListener('change',renderLog);
 $id('mob-filter-note').addEventListener('change',renderLog);
 $id('pc-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;renderStats()});
 $id('mob-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;renderStats()});
-$id('m-start').addEventListener('change',updateDurationPreview);
-$id('m-end').addEventListener('change',updateDurationPreview);
-$id('m-date').addEventListener('change',updateDurationPreview);
-$id('m-note-sel').addEventListener('change',function(){const inp=$id('m-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
+forEachModalRoot(root=>{
+  ['m-start','m-end','m-date'].forEach(name=>{
+    const field=modalField(name,root);
+    if(field)field.addEventListener('change',()=>updateDurationPreview(root));
+  });
+  const noteSel=modalField('m-note-sel',root),noteInput=modalField('m-note-input',root);
+  if(noteSel&&noteInput)noteSel.addEventListener('change',function(){noteInput.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')noteInput.value=''});
+});
 $id('pc-content-note-sel').addEventListener('change',function(){const inp=$id('pc-content-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
 $id('mob-content-note-sel').addEventListener('change',function(){const inp=$id('mob-content-note-input');inp.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')inp.value=''});
 $id('pc-add-modal').addEventListener('click',function(e){if(e.target===this)closeAddModal()});
