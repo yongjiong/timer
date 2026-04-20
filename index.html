@@ -463,6 +463,14 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
   .mob-stats-section-title { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 10px; }
   .mob-cat-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .mob-article-sel-wrap { margin-bottom: 0; }
+  .mob-gantt-axis { position:relative; height:14px; margin-left:28px; margin-bottom:3px; }
+  .mob-gantt-axis-tick { position:absolute; font-size:8px; color:var(--muted); transform:translateX(-50%); }
+  .mob-gantt-row { display:flex; align-items:center; height:22px; }
+  .mob-gantt-day-lbl { width:28px; flex-shrink:0; font-size:10px; color:var(--muted); text-align:right; padding-right:5px; }
+  .mob-gantt-day-lbl.today { color:var(--accent); font-weight:700; }
+  .mob-gantt-track { flex:1; position:relative; background:var(--surface2); border-radius:3px; height:100%; overflow:hidden; border:1px solid var(--border-light); }
+  .mob-gantt-block { position:absolute; top:2px; bottom:2px; border-radius:2px; opacity:0.85; min-width:2px; }
+  .mob-gantt-grid { position:absolute; top:0; bottom:0; width:1px; background:rgba(0,0,0,0.06); pointer-events:none; }
   .mob-article-detail-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; }
   .mob-article-detail-name { flex: 1; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mob-article-detail-time { font-size: 13px; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; flex-shrink: 0; }
@@ -851,6 +859,17 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
           <select id="mob-article-sel" class="field-select" style="font-size:13px;padding:8px 10px;background:var(--surface);" onchange="renderArticleDetailSelected()"></select>
         </div>
         <div id="mob-article-detail" style="margin-top:10px;margin-bottom:16px;"></div>
+        <div class="mob-stats-section-title">本周学习时段</div>
+        <div class="mob-chart-wrap" style="padding:12px 10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <button class="mob-year-btn" onclick="changeWeek(-1)" style="font-size:14px;">‹</button>
+            <span id="mob-week-heatmap-label" style="font-size:12px;font-weight:600;color:var(--ink-2);text-align:center;flex:1;"></span>
+            <button class="mob-year-btn" onclick="changeWeek(1)" style="font-size:14px;">›</button>
+          </div>
+          <div class="mob-gantt-axis" id="mob-gantt-axis"></div>
+          <div id="mob-week-gantt" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div id="mob-week-summary" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);"></div>
+        </div>
         <div class="mob-stats-section-title" id="mob-heatmap-title">全年热力图</div>
         <div class="mob-heatmap-wrap"><div id="mob-heatmap" style="min-width:max-content;"></div>
           <div class="mob-hm-legend">少
@@ -1288,7 +1307,7 @@ function renderToday(){
   const allDone=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>{const ak=(b.date+(b.start_time||'00:00:00'));const bk=(a.date+(a.start_time||'00:00:00'));return ak>bk?-1:ak<bk?1:0}).slice(0,5);
   // PC recent
   const pcList=$id('pc-recent-list');
-  if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${formatRecordPrimary(s)}</span><span class="record-duration">${formatRecordDuration(s)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button></div></div>`).join('');}}
+  if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${formatRecordPrimary(s)}</span><span class="record-duration">${formatRecordDuration(s)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></div>`).join('');}}
   // Mobile recent
   const mobList=$id('mob-recent-list');
   if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${formatRecordDuration(s)}</div><div class="mob-rec-meta">${formatRecordPrimary(s)}${isRangeRecord(s)?'':' · '+s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<div style="display:flex;gap:6px;flex-shrink:0;"><button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-rec-del" onclick="deleteRecord('${s.id}')">✕</button></div></div>`).join('');}}
@@ -1734,9 +1753,11 @@ function renderWeekHourHeatmap(){
   const ganttEl=$id('pc-week-gantt');
   const axisEl=$id('pc-gantt-axis');
   const labelEl=$id('pc-week-heatmap-label');
-  const tooltip=$id('week-gantt-tooltip');
-  if(!ganttEl)return;
-  // Clear old legend
+  const mobGanttEl=$id('mob-week-gantt');
+  const mobAxisEl=$id('mob-gantt-axis');
+  const mobLabelEl=$id('mob-week-heatmap-label');
+
+  // Clear old PC legend
   const oldLegend=$id('pc-gantt-legend');
   if(oldLegend)oldLegend.remove();
 
@@ -1748,7 +1769,7 @@ function renderWeekHourHeatmap(){
     days.push(d);
   }
 
-  // Week label + ISO week number
+  // Week label
   const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
   function getISOWeek(d){
     const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
@@ -1758,20 +1779,11 @@ function renderWeekHourHeatmap(){
     return Math.ceil((((dt-yearStart)/86400000)+1)/7);
   }
   const wn=getISOWeek(days[0]);
-  if(labelEl)labelEl.innerHTML=`<span style="color:var(--muted);font-size:11px;font-weight:400;margin-right:6px;">第${wn}周</span>&nbsp;&nbsp;${fmt(days[0])} – ${fmt(days[6])}`;
+  const weekLabelHtml=`<span style="color:var(--muted);font-size:11px;font-weight:400;margin-right:6px;">第${wn}周</span>&nbsp;&nbsp;${fmt(days[0])} – ${fmt(days[6])}`;
+  if(labelEl)labelEl.innerHTML=weekLabelHtml;
+  if(mobLabelEl)mobLabelEl.innerHTML=weekLabelHtml;
 
-  // Time axis: 0–24h, show ticks every 3h
-  const HOURS=24;
-  if(axisEl){
-    const ticks=[];
-    for(let h=0;h<=HOURS;h+=3){
-      const pct=(h/HOURS)*100;
-      ticks.push(`<div class="week-gantt-axis-tick" style="left:${pct}%">${h===0?'0':h}时</div>`);
-    }
-    axisEl.innerHTML=ticks.join('');
-  }
-
-  // Category → color palette (fixed colors for known types, auto-assign for others)
+  // Color palette
   const CATEGORY_COLORS=['#3A6EA8','#2E7D52','#8B5CF6','#D97706','#DC2626','#0891B2','#BE185D','#65A30D'];
   const colorMap={};
   const cats=getContentTypeOptions().filter(c=>!isRangeCategory(c));
@@ -1782,8 +1794,6 @@ function renderWeekHourHeatmap(){
   const allSessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
   const todayStr2=localDateStr();
   const dayStrs=days.map(d=>localDateStr(d));
-
-  // sessionsByDay[dateStr] = [{startMin, endMin, label, color}]
   const sessionsByDay={};
   dayStrs.forEach(ds=>sessionsByDay[ds]=[]);
 
@@ -1809,56 +1819,93 @@ function renderWeekHourHeatmap(){
   });
 
   const dayNames=['一','二','三','四','五','六','日'];
-  const TOTAL_MINS=HOURS*60;
+  const PC_HOURS=24, PC_TOTAL=PC_HOURS*60;
+  // Mobile: show 6h–24h range to save space
+  const MOB_START=6*60, MOB_END=24*60, MOB_SPAN=MOB_END-MOB_START;
 
-  const rows=days.map((d,di)=>{
-    const ds=localDateStr(d);
-    const isToday=ds===todayStr2;
-    const segs=sessionsByDay[ds]||[];
-
-    // Grid lines every 3h
-    const gridLines=[];
-    for(let h=3;h<HOURS;h+=3){
-      const pct=(h/HOURS)*100;
-      gridLines.push(`<div class="week-gantt-grid-line" style="left:${pct}%"></div>`);
+  // ── PC axis ──
+  if(axisEl){
+    const ticks=[];
+    for(let h=0;h<=PC_HOURS;h+=3){
+      ticks.push(`<div class="week-gantt-axis-tick" style="left:${(h/PC_HOURS*100).toFixed(1)}%">${h===0?'0':h}时</div>`);
     }
-
-    const blocks=segs.map(seg=>{
-      const left=(seg.startMin/TOTAL_MINS)*100;
-      const width=Math.max(((seg.endMin-seg.startMin)/TOTAL_MINS)*100,0.3);
-      return`<div class="week-gantt-block" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%;background:${seg.color}" data-tip="${escapeHtml(seg.label)}" onmouseenter="showGanttTip(event,this)" onmouseleave="hideGanttTip()"></div>`;
-    }).join('');
-
-    return`<div class="week-gantt-row">
-      <div class="week-gantt-day-label${isToday?' today':''}">周${dayNames[di]}<br><span style="font-size:9px;opacity:0.7">${fmt(d)}</span></div>
-      <div class="week-gantt-track">${gridLines.join('')}${blocks}</div>
-    </div>`;
-  }).join('');
-
-  ganttEl.innerHTML=rows;
-
-  // Render color legend — collect cats actually used this week
-  const usedNotes=new Set(Object.values(sessionsByDay).flat().map(seg=>{
-    // label format: "分类名 · 事项 HH:MM–HH:MM (Xm)" — extract note by color lookup
-    return cats.find(c=>getCatColor(c)===seg.color)||'';
-  }).filter(Boolean));
-  const legendCats=cats.filter(c=>usedNotes.has(c));
-  let legendHtml='';
-  if(legendCats.length){
-    legendHtml=`<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">`
-      +legendCats.map(c=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-2);"><div style="width:12px;height:12px;border-radius:2px;background:${getCatColor(c)};flex-shrink:0;"></div>${escapeHtml(c)}</div>`).join('')
-      +`</div>`;
+    axisEl.innerHTML=ticks.join('');
   }
-  ganttEl.insertAdjacentHTML('afterend', legendHtml ? `<div id="pc-gantt-legend">${legendHtml}</div>` : '');
 
-  // ── Weekly summary: total + per-category + per-article breakdown ──
+  // ── Mobile axis (6–24h) ──
+  if(mobAxisEl){
+    const ticks=[];
+    for(let h=6;h<=24;h+=3){
+      const pct=((h*60-MOB_START)/MOB_SPAN*100).toFixed(1);
+      ticks.push(`<div class="mob-gantt-axis-tick" style="left:${pct}%">${h}时</div>`);
+    }
+    mobAxisEl.innerHTML=ticks.join('');
+  }
+
+  // ── PC rows ──
+  if(ganttEl){
+    const rows=days.map((d,di)=>{
+      const ds=localDateStr(d);
+      const isToday=ds===todayStr2;
+      const segs=sessionsByDay[ds]||[];
+      const gridLines=[];
+      for(let h=3;h<PC_HOURS;h+=3){
+        gridLines.push(`<div class="week-gantt-grid-line" style="left:${(h/PC_HOURS*100).toFixed(1)}%"></div>`);
+      }
+      const blocks=segs.map(seg=>{
+        const left=(seg.startMin/PC_TOTAL*100).toFixed(3);
+        const width=Math.max(((seg.endMin-seg.startMin)/PC_TOTAL*100),0.3).toFixed(3);
+        return`<div class="week-gantt-block" style="left:${left}%;width:${width}%;background:${seg.color}" data-tip="${escapeHtml(seg.label)}" onmouseenter="showGanttTip(event,this)" onmouseleave="hideGanttTip()"></div>`;
+      }).join('');
+      return`<div class="week-gantt-row">
+        <div class="week-gantt-day-label${isToday?' today':''}">周${dayNames[di]}<br><span style="font-size:9px;opacity:0.7">${fmt(d)}</span></div>
+        <div class="week-gantt-track">${gridLines.join('')}${blocks}</div>
+      </div>`;
+    }).join('');
+    ganttEl.innerHTML=rows;
+
+    // PC legend
+    const usedNotes=new Set(Object.values(sessionsByDay).flat().map(seg=>cats.find(c=>getCatColor(c)===seg.color)||'').filter(Boolean));
+    const legendCats=cats.filter(c=>usedNotes.has(c));
+    if(legendCats.length){
+      const legendHtml=`<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">`
+        +legendCats.map(c=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-2);"><div style="width:12px;height:12px;border-radius:2px;background:${getCatColor(c)};flex-shrink:0;"></div>${escapeHtml(c)}</div>`).join('')
+        +`</div>`;
+      ganttEl.insertAdjacentHTML('afterend',`<div id="pc-gantt-legend">${legendHtml}</div>`);
+    }
+  }
+
+  // ── Mobile rows (6h–24h window) ──
+  if(mobGanttEl){
+    const rows=days.map((d,di)=>{
+      const ds=localDateStr(d);
+      const isToday=ds===todayStr2;
+      const segs=sessionsByDay[ds]||[];
+      const gridLines=[];
+      for(let h=6;h<=24;h+=3){
+        const pct=((h*60-MOB_START)/MOB_SPAN*100).toFixed(1);
+        gridLines.push(`<div class="mob-gantt-grid" style="left:${pct}%"></div>`);
+      }
+      const blocks=segs.map(seg=>{
+        const clippedStart=Math.max(seg.startMin,MOB_START);
+        const clippedEnd=Math.min(seg.endMin,MOB_END);
+        if(clippedEnd<=clippedStart)return'';
+        const left=((clippedStart-MOB_START)/MOB_SPAN*100).toFixed(3);
+        const width=Math.max(((clippedEnd-clippedStart)/MOB_SPAN*100),0.5).toFixed(3);
+        return`<div class="mob-gantt-block" style="left:${left}%;width:${width}%;background:${seg.color}" title="${escapeHtml(seg.label)}"></div>`;
+      }).join('');
+      return`<div class="mob-gantt-row">
+        <div class="mob-gantt-day-lbl${isToday?' today':''}">周${dayNames[di]}</div>
+        <div class="mob-gantt-track">${gridLines.join('')}${blocks}</div>
+      </div>`;
+    }).join('');
+    mobGanttEl.innerHTML=rows;
+  }
+
   renderWeekSummary(dayStrs);
 }
 
 function renderWeekSummary(dayStrs){
-  const summaryEl=$id('pc-week-summary');
-  if(!summaryEl)return;
-
   const sessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
   const catMap={};
   let totalMins=0;
@@ -1882,32 +1929,33 @@ function renderWeekSummary(dayStrs){
     });
   });
 
-  if(totalMins===0){
-    summaryEl.innerHTML='<div style="font-size:12px;color:var(--muted);padding-top:12px;border-top:1px solid var(--border-light);">本周暂无记录</div>';
-    return;
-  }
-
   const cats=getContentTypeOptions().filter(c=>!isRangeCategory(c));
   const CATEGORY_COLORS=['#3A6EA8','#2E7D52','#8B5CF6','#D97706','#DC2626','#0891B2','#BE185D','#65A30D'];
   const colorMap={};cats.forEach((c,i)=>{colorMap[c]=CATEGORY_COLORS[i%CATEGORY_COLORS.length]});
   const getColor=n=>colorMap[n]||'#94A3B8';
 
-  const catEntries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
-  const catsHtml=catEntries.map(([cat,mins])=>`
-    <div class="week-sum-cat-row">
-      <div class="week-sum-cat-dot" style="background:${getColor(cat)}"></div>
-      <span class="week-sum-cat-name">${escapeHtml(cat)}</span>
-      <span class="week-sum-cat-time">${fmtMinutes(mins)}</span>
-    </div>`).join('');
-
-  summaryEl.innerHTML=`
-    <div class="week-sum-wrap">
+  const buildHtml=(empty)=>{
+    if(totalMins===0)return`<div style="font-size:12px;color:var(--muted);">${empty}</div>`;
+    const catEntries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+    const catsHtml=catEntries.map(([cat,mins])=>`
+      <div class="week-sum-cat-row">
+        <div class="week-sum-cat-dot" style="background:${getColor(cat)}"></div>
+        <span class="week-sum-cat-name">${escapeHtml(cat)}</span>
+        <span class="week-sum-cat-time">${fmtMinutes(mins)}</span>
+      </div>`).join('');
+    return`<div class="week-sum-wrap">
       <div class="week-sum-total-row">
         <span class="week-sum-total-label">本周总计</span>
         <span class="week-sum-total-val">${fmtMinutes(totalMins)}</span>
       </div>
       <div class="week-sum-cats">${catsHtml}</div>
     </div>`;
+  };
+
+  const pcSum=$id('pc-week-summary');
+  if(pcSum)pcSum.innerHTML=buildHtml('本周暂无记录');
+  const mobSum=$id('mob-week-summary');
+  if(mobSum)mobSum.innerHTML=buildHtml('本周暂无记录');
 }
 
 // ── Article detail: 英语学习事项累计时长（下拉选择器模式，PC+手机）──
