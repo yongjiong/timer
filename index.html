@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>活动计时</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════
+   SHARED CSS VARIABLES
+   ════════════════════════════════════ */
+:root {
+  --bg:           #F4F6F9;
+  --surface:      #FFFFFF;
+  --surface2:     #F0F2F7;
+  --border:       #DDE3EA;
+  --border-light: #EEF1F5;
+  --ink:          #1A2733;
+  --ink-2:        #3D5060;
+  --muted:        #7A90A0;
+  --accent:       #3A6EA8;
+  --accent-soft:  #EAF0F8;
+  --accent-mid:   #C5D8EE;
+  --green:        #2E7D52;
+  --green-soft:   #E8F5EE;
+  --red:          #C0392B;
+  --red-soft:     #FDECEA;
+  --heat-0:       #EAECEE;
+  --heat-1:       #C5D8EE;
+  --heat-2:       #7FA8C4;
+  --heat-3:       #3A6EA8;
+  --heat-4:       #1B3F66;
+  --radius:       8px;
+  --shadow:       0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:    0 2px 12px rgba(0,0,0,0.10);
+  --nav-h:        68px;
+  --safe-bottom:  env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Noto Sans SC', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ════════════════════════════════════
+   SHARED COMPONENTS
+   ════════════════════════════════════ */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.badge-note { background: var(--accent-soft); color: var(--accent); }
+
+.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.field-input, .field-select {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; color: var(--ink); background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none; font-family: inherit; appearance: none; -webkit-appearance: none;
+}
+.field-input:focus, .field-select:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: var(--surface);
+}
+.field-input::placeholder { color: var(--muted); }
+
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border: none; border-radius: var(--radius);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #2d5a8a; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-danger { background: var(--red-soft); color: var(--red); border: 1px solid #f5c6c2; }
+.btn-danger:hover { background: #fad4d0; }
+.btn-secondary { background: var(--bg); color: var(--ink-2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border-light); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+.pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.pager-info { min-width: 96px; text-align: center; font-variant-numeric: tabular-nums; }
+.pager-btn { border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 5px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.pager-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pager-btn:disabled { opacity: 0.42; cursor: not-allowed; border-color: var(--border); color: var(--muted); }
+
+.status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); transition: all 0.3s; flex-shrink: 0; }
+.status-dot.running { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px var(--green-soft)}50%{box-shadow:0 0 0 6px rgba(46,125,82,0.06)} }
+
+.voice-status { display: none; font-size: 12px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-mid); border-radius: 6px; padding: 8px 10px; }
+.voice-status.show { display: block; }
+
+.bar-chart { display: flex; align-items: stretch; gap: 3px; }
+.bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; min-width: 0; }
+.bar-track { width: 100%; flex: 1; display: flex; align-items: flex-end; }
+.bar-fill { width: 100%; border-radius: 3px 3px 0 0; background: var(--accent-mid); min-height: 2px; cursor: pointer; transition: background 0.2s; }
+.bar-fill:hover, .bar-fill.active { background: var(--accent); }
+.bar-label {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 4px;
+  white-space: nowrap;
+  height: 12px;
+  line-height: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.chart-detail { margin-top: 10px; min-height: 18px; font-size: 12px; color: var(--ink-2); }
+
+.heatmap-cell { width: 13px; height: 13px; border-radius: 2px; background: var(--heat-0); }
+.heatmap-cell[data-lvl="1"] { background: var(--heat-1); }
+.heatmap-cell[data-lvl="2"] { background: var(--heat-2); }
+.heatmap-cell[data-lvl="3"] { background: var(--heat-3); }
+.heatmap-cell[data-lvl="4"] { background: var(--heat-4); }
+.heatmap-cell[data-future="1"] { background: transparent; }
+
+.toast-common {
+  padding: 10px 16px; border-radius: 6px; font-size: 13px;
+  box-shadow: var(--shadow-md); animation: toastAnim 0.2s ease;
+  font-family: 'DM Mono', monospace;
+}
+@keyframes toastAnim { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.toast-common.success { background: var(--green); color: #fff; }
+.toast-common.error   { background: var(--red);   color: #fff; }
+.toast-common.warning { background: #8a6d0b;      color: #fff; }
+
+/* Shared modal/sheet overlay */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
+
+datalist { display: none; }
+
+/* ════════════════════════════════════
+   ██████  PC LAYOUT  (≥ 768px)
+   ════════════════════════════════════ */
+.pc-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100; padding: 0 24px;
+}
+.pc-header-inner {
+  max-width: 960px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; height: 52px;
+}
+.app-title { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+.pc-tabs { display: flex; }
+.pc-tab-btn {
+  background: none; border: none; cursor: pointer;
+  padding: 0 16px; height: 52px; font-size: 13px; font-weight: 500; color: var(--muted);
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; font-family: inherit;
+}
+.pc-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pc-tab-btn:hover { color: var(--ink-2); }
+
+.pc-body { max-width: 960px; margin: 0 auto; padding: 24px 24px 60px; }
+.pc-panel { display: none; }
+.pc-panel.active { display: block; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-body { padding: 20px 24px; }
+.card + .card { margin-top: 16px; }
+
+/* PC stats bar */
+.pc-stats-bar { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 16px; }
+.stat-cell { background: var(--surface); padding: 16px 20px; text-align: center; }
+.stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+.stat-value { font-size: 26px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat-unit { font-size: 13px; font-weight: 400; color: var(--ink-2); margin-left: 2px; }
+
+/* PC timer */
+.timer-panel { padding: 24px; }
+.timer-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.status-text { font-size: 13px; color: var(--muted); }
+.timer-display { font-size: 44px; font-weight: 700; letter-spacing: 0.04em; color: var(--ink); font-variant-numeric: tabular-nums; margin-bottom: 20px; line-height: 1; font-family: 'DM Mono', monospace; }
+.timer-display.running { color: var(--accent); }
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.field-inline { display: flex; gap: 8px; align-items: center; }
+.field-inline .field-select { flex: 1; min-width: 0; }
+.inline-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.inline-actions .btn { flex: 0; min-width: 48px; height: 34px; padding: 0 12px; font-size: 12px; border-radius: 999px; }
+
+.btn-row { display: flex; gap: 12px; }
+
+/* PC section title */
+.section-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+
+/* PC record list */
+.record-list { display: flex; flex-direction: column; gap: 8px; }
+.record-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border-light); font-size: 13px; }
+.record-time { color: var(--muted); min-width: 120px; font-variant-numeric: tabular-nums; }
+.record-duration { font-weight: 600; min-width: 54px; }
+.record-note { flex: 1; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.btn-edit, .btn-del { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px 6px; border-radius: 4px; font-size: 12px; transition: all 0.15s; font-family: inherit; }
+.btn-edit:hover { background: var(--accent-soft); color: var(--accent); }
+.btn-del:hover { background: var(--red-soft); color: var(--red); }
+
+/* PC toolbar */
+.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar input, .toolbar select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--ink); background: var(--surface); outline: none; font-family: inherit; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
+
+/* PC table */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid var(--border-light); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg); }
+tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
+.td-muted { color: var(--muted); }
+.td-mono { font-variant-numeric: tabular-nums; }
+
+/* PC Stats overview unified card */
+.stats-overview-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 16px; }
+.stats-overview-divider { height: 1px; background: var(--border-light); margin: 16px 0; }
+.pc-stats-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.pc-stats-summary { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 16px; }
+.summary-item { background: var(--bg); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+.summary-item:hover { border-color: var(--accent-mid); transform: translateY(-1px); }
+.summary-item.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.summary-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.summary-item-name { font-size: 13px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-item-time { font-size: 16px; font-weight: 700; color: var(--accent); }
+.summary-item-meta { font-size: 11px; color: var(--muted); }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.stat-card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.stat-card-value { font-size: 22px; font-weight: 700; color: var(--ink); }
+.stat-card-unit { font-size: 13px; font-weight: 400; color: var(--muted); }
+.stats-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.year-sel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.year-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink); transition: all 0.15s; }
+.year-btn:hover { border-color: var(--accent); color: var(--accent); }
+.year-display { font-size: 15px; font-weight: 600; min-width: 54px; text-align: center; }
+
+.chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 16px; }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 16px; }
+.period-summary-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 16px; }
+.period-summary-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.period-summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.period-summary-card { background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; }
+.period-summary-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.period-summary-value { font-size: 18px; font-weight: 700; color: var(--ink); }
+.period-summary-note { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.pc-bar-chart { height: 120px; }
+.heatmap-scroll { overflow-x: auto; }
+.heatmap { display: flex; flex-direction: column; gap: 8px; min-width: max-content; }
+
+/* ── Weekly Gantt Chart ── */
+.week-gantt-wrap { position: relative; }
+.week-gantt-axis { display: flex; margin-left: 36px; margin-bottom: 4px; position: relative; height: 16px; }
+.week-gantt-axis-tick { position: absolute; font-size: 9px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+.week-gantt-rows { display: flex; flex-direction: column; gap: 5px; }
+.week-gantt-row { display: flex; align-items: center; height: 26px; }
+.week-gantt-day-label { width: 36px; flex-shrink: 0; font-size: 11px; color: var(--muted); text-align: right; padding-right: 8px; }
+.week-gantt-day-label.today { color: var(--accent); font-weight: 700; }
+.week-gantt-track { flex: 1; position: relative; background: var(--surface2); border-radius: 4px; height: 100%; overflow: hidden; border: 1px solid var(--border-light); }
+.week-gantt-block { position: absolute; top: 2px; bottom: 2px; background: var(--accent); border-radius: 3px; opacity: 0.85; cursor: pointer; transition: opacity 0.15s; min-width: 2px; }
+.week-gantt-block:hover { opacity: 1; }
+.week-gantt-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,0.06); pointer-events: none; }
+.week-nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.week-nav-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px; color: var(--ink); transition: all 0.15s; }
+.week-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.week-nav-label { font-size: 13px; font-weight: 600; color: var(--ink-2); min-width: 160px; text-align: center; }
+.week-gantt-tooltip { position: fixed; background: var(--ink); color: #fff; font-size: 11px; padding: 5px 9px; border-radius: 5px; pointer-events: none; z-index: 999; white-space: nowrap; display: none; }
+
+/* ── Weekly summary (below gantt) ── */
+.week-sum-wrap { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-light); }
+.week-sum-total-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.week-sum-total-label { font-size: 12px; color: var(--muted); }
+.week-sum-total-val { font-size: 18px; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; }
+.week-sum-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.week-sum-cat-row { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border-light); border-radius: 6px; padding: 5px 10px; }
+.week-sum-cat-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.week-sum-cat-name { font-size: 12px; color: var(--ink-2); }
+.week-sum-cat-time { font-size: 12px; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; margin-left: 4px; }
+
+/* ── Article detail panel ── */
+.article-detail-wrap { }
+.article-detail-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 12px; }
+.article-detail-list { display: flex; flex-direction: column; gap: 6px; }
+.article-detail-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; }
+.article-detail-rank { font-size: 11px; color: var(--muted); min-width: 18px; text-align: right; font-family: 'DM Mono', monospace; }
+.article-detail-name { flex: 1; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.article-detail-bar-wrap { width: 100px; flex-shrink: 0; height: 4px; background: var(--border-light); border-radius: 2px; overflow: hidden; }
+.article-detail-bar { height: 100%; background: var(--accent); border-radius: 2px; }
+.article-detail-time { font-size: 12px; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; min-width: 60px; text-align: right; flex-shrink: 0; }
+.article-detail-count { font-size: 11px; color: var(--muted); min-width: 40px; text-align: right; flex-shrink: 0; }
+.heatmap-row { display: flex; align-items: center; gap: 8px; }
+.heatmap-month-tag { width: 34px; flex: 0 0 34px; font-size: 11px; color: var(--muted); text-align: right; }
+.heatmap-days { display: flex; gap: 3px; }
+.heatmap-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 8px; justify-content: flex-end; }
+.legend-cell { width: 12px; height: 12px; border-radius: 2px; }
+
+/* PC Modal */
+.pc-modal { background: var(--surface); border-radius: 10px; width: 100%; max-width: 480px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); overflow: hidden; }
+.modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 15px; font-weight: 600; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 18px; line-height: 1; padding: 4px; border-radius: 4px; }
+.modal-close:hover { color: var(--ink); }
+.modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* PC Manager */
+.manager-list { display: flex; flex-direction: column; gap: 8px; }
+.manager-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; cursor: default; transition: box-shadow 0.15s; }
+.manager-row.drag-over { box-shadow: 0 0 0 2px var(--accent); }
+.manager-row.dragging { opacity: 0.4; }
+.manager-drag-handle { color: var(--muted); font-size: 16px; cursor: grab; padding: 2px 4px; flex-shrink: 0; user-select: none; touch-action: none; }
+.manager-drag-handle:active { cursor: grabbing; }
+.manager-row .field-input { flex: 1; background: var(--surface); }
+.manager-del-btn { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; line-height: 1; }
+.manager-del-btn:hover { color: var(--red); background: var(--red-soft); }
+
+/* PC Toast */
+.pc-toast-wrap { position: fixed; top: 64px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+
+/* PC Empty */
+.empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+
+/* Voice btn PC */
+.voice-btn-pc {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 6px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--ink-2); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.2s;
+}
+.voice-btn-pc:hover { border-color: var(--accent); color: var(--accent); }
+.voice-btn-pc.recording { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+
+/* ════════════════════════════════════
+   ██████  MOBILE LAYOUT  (< 768px)
+   ════════════════════════════════════ */
+/* Hide PC elements on mobile, show mobile elements on PC */
+.mobile-only { display: none; }
+.pc-only { display: block; }
+
+@media (max-width: 767px) {
+  html, body { height: 100%; overflow: hidden; }
+  
+  .pc-only  { display: none !important; }
+  .mobile-only { display: block; }
+
+  /* ── Mobile app shell ── */
+  .mob-app { display: flex; flex-direction: column; height: 100dvh; height: 100vh; }
+  .mob-page-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px); }
+
+  /* ── Bottom nav ── */
+  .mob-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: calc(var(--nav-h) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom); padding-top: 8px;
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: flex-start; z-index: 100;
+  }
+  .mob-nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 0; cursor: pointer; border: none; background: none; color: var(--muted); font-family: inherit;
+  }
+  .mob-nav-item.active { color: var(--accent); }
+  .mob-nav-icon { font-size: 20px; line-height: 1; position: relative; }
+  .mob-nav-icon::after { content:''; position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--accent); opacity:0; transition:opacity 0.2s; }
+  .mob-nav-item.active .mob-nav-icon::after { opacity: 1; }
+  .mob-nav-label { font-size: 10px; font-weight: 500; letter-spacing: 0.02em; }
+
+  /* ── Mobile pages ── */
+  .mob-page { display: none; }
+  .mob-page.active { display: block; }
+
+  /* ── Today hero ── */
+  .mob-hero { padding: 24px 16px 16px; background: linear-gradient(180deg, rgba(58,110,168,0.05) 0%, transparent 100%); }
+  .mob-date { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; font-family: 'DM Mono', monospace; margin-bottom: 16px; }
+
+  .mob-stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+  .mob-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 10px; text-align: center; }
+  .mob-stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 4px; }
+  .mob-stat-val { font-size: 20px; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; line-height: 1; }
+  .mob-stat-unit { font-size: 11px; font-weight: 400; color: var(--ink-2); }
+
+  /* ── Mobile timer card ── */
+  .mob-timer-card { margin: 0 12px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .mob-timer-inner { padding: 20px 16px 16px; }
+  .mob-status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .mob-status-text { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mob-timer-display { font-family: 'DM Mono', monospace; font-size: 48px; font-weight: 500; color: var(--muted); letter-spacing: 0.02em; line-height: 1; margin-bottom: 20px; transition: color 0.3s; }
+  .mob-timer-display.running { color: var(--accent); }
+
+  .mob-field-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .mob-field-wrap { display: flex; flex-direction: column; gap: 5px; }
+  .mob-field-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-family: 'DM Mono', monospace; }
+  .mob-field-row { display: flex; gap: 8px; align-items: center; }
+  .mob-field-row .field-input, .mob-field-row .field-select { flex: 1; padding: 11px 12px; background: var(--surface2); font-size: 14px; }
+  .mob-field-row .field-input { background: var(--surface2); }
+  .mob-edit-btn { flex-shrink: 0; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--ink-2); font-size: 12px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+  .mob-cta-row { display: flex; gap: 10px; }
+  .mob-btn-cta { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: transform 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .mob-btn-cta:active { transform: scale(0.97); }
+  .mob-btn-start { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(58,110,168,0.3); }
+  .mob-btn-stop { background: var(--red-soft); color: var(--red); border: 1px solid #f5c6c2; }
+
+  /* ── Mobile recent ── */
+  .mob-section-hd { padding: 0 16px 10px; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+  .mob-record-list { padding: 0 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mob-record-card { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .mob-rec-info { flex: 1; min-width: 0; }
+  .mob-rec-dur { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .mob-rec-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .mob-rec-title { font-size: 12px; color: var(--ink-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mob-rec-edit { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; color: var(--muted); font-size: 12px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+  .mob-rec-del { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px; color: var(--red); font-size: 12px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+
+  /* ── Mobile page header ── */
+  .mob-page-hd { padding: 22px 16px 14px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* ── Mobile log ── */
+  .mob-toolbar { padding: 0 12px 12px; display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mob-toolbar::-webkit-scrollbar { display: none; }
+  .mob-chip { flex-shrink: 0; padding: 8px 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); font-size: 13px; cursor: pointer; font-family: inherit; appearance: none; outline: none; }
+  .mob-chip:focus { border-color: var(--accent); }
+  input.mob-chip { color: var(--ink-2); }
+  .mob-date-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; min-width: 110px; white-space: nowrap; }
+  .mob-date-chip-text { pointer-events: none; }
+  .mob-date-chip input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .mob-action-chips { padding: 0 12px 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .mob-action-chip { padding: 8px 14px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); font-size: 12px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .mob-action-chip.prim { background: var(--accent-soft); border-color: var(--accent-mid); color: var(--accent); }
+  .pager { justify-content: center; padding: 0 12px; gap: 10px; }
+  .pager-info { min-width: 86px; }
+  .pager-btn { padding: 6px 12px; background: var(--surface); }
+  .mob-log-list { padding: 0 12px; display: flex; flex-direction: column; gap: 6px; }
+  .mob-log-item { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .mob-log-date { flex-shrink: 0; text-align: center; min-width: 28px; }
+  .mob-log-day { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .mob-log-mon { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mob-log-detail { flex: 1; min-width: 0; }
+  .mob-log-times { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+  .mob-log-article { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mob-log-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .mob-log-dur { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--ink); }
+  .mob-log-btns { display: flex; gap: 4px; }
+  .mob-log-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: var(--muted); cursor: pointer; font-family: inherit; }
+
+  /* ── Mobile stats ── */
+  .mob-stats-hero { padding: 22px 16px 0; }
+  .mob-year-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .mob-year-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mob-year-val { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; flex: 1; text-align: center; }
+  .mob-sc-cards { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 16px; }
+  .mob-sc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .mob-sc-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+  .mob-sc-val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .mob-sc-unit { font-size: 12px; color: var(--ink-2); font-weight: 400; }
+  .mob-stats-section { padding: 0 16px 20px; }
+  .mob-stats-section-title { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+  .mob-cat-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .mob-article-sel-wrap { margin-bottom: 0; }
+  .mob-gantt-axis { position:relative; height:14px; margin-left:28px; margin-bottom:3px; }
+  .mob-gantt-axis-tick { position:absolute; font-size:8px; color:var(--muted); transform:translateX(-50%); }
+  .mob-gantt-row { display:flex; align-items:center; height:22px; }
+  .mob-gantt-day-lbl { width:28px; flex-shrink:0; font-size:10px; color:var(--muted); text-align:right; padding-right:5px; }
+  .mob-gantt-day-lbl.today { color:var(--accent); font-weight:700; }
+  .mob-gantt-track { flex:1; position:relative; background:var(--surface2); border-radius:3px; height:100%; overflow:hidden; border:1px solid var(--border-light); }
+  .mob-gantt-block { position:absolute; top:2px; bottom:2px; border-radius:2px; opacity:0.85; min-width:2px; }
+  .mob-gantt-grid { position:absolute; top:0; bottom:0; width:1px; background:rgba(0,0,0,0.06); pointer-events:none; }
+  .mob-article-detail-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; }
+  .mob-article-detail-name { flex: 1; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mob-article-detail-time { font-size: 13px; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; flex-shrink: 0; }
+  .mob-article-detail-count { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .mob-cat-item { background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .mob-cat-item.active { border-color: var(--accent); background: var(--accent-soft); }
+  .mob-cat-bar { flex: 1; }
+  .mob-cat-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 5px; }
+  .mob-cat-prog { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .mob-cat-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+  .mob-cat-count { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mob-cat-time { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--accent); flex-shrink: 0; }
+  .mob-chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .mob-chart-title { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .mob-period-summary { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .mob-period-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .mob-period-card { background: var(--surface2); border-radius: 10px; padding: 10px 12px; }
+  .mob-period-label { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 4px; }
+  .mob-period-value { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--ink); font-weight: 600; }
+  .mob-period-note { margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+  .mob-bar-chart { height: 80px; }
+  .mob-heatmap-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mob-hm-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .mob-hm-label { width: 26px; font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; text-align: right; flex-shrink: 0; }
+  .mob-hm-days { display: flex; gap: 2px; }
+  .mob-hm-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--heat-0); }
+  .mob-hm-cell[data-l="1"] { background: var(--heat-1); }
+  .mob-hm-cell[data-l="2"] { background: var(--heat-2); }
+  .mob-hm-cell[data-l="3"] { background: var(--heat-3); }
+  .mob-hm-cell[data-l="4"] { background: var(--heat-4); }
+  .mob-hm-cell[data-future] { background: transparent; }
+  .mob-hm-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 8px; font-size: 10px; color: var(--muted); }
+  .mob-hm-leg { width: 9px; height: 9px; border-radius: 2px; }
+  .mob-filter-wrap { padding: 0 16px 12px; }
+  .mob-filter-wrap .field-select { background: var(--surface); max-width: 200px; padding: 9px 12px; }
+
+  /* ── Mobile Bottom Sheet ── */
+  .mob-sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; }
+  .mob-sheet-overlay.open { display: flex; }
+  .mob-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-height: 92dvh; overflow-y: auto; padding-bottom: calc(16px + var(--safe-bottom)); animation: sheetUp 0.3s cubic-bezier(0.34,1.4,0.64,1); }
+  @keyframes sheetUp { from{transform:translateY(100%);opacity:0.6} to{transform:translateY(0);opacity:1} }
+  .mob-sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+  .mob-sheet-header { padding: 16px 18px 0; display: flex; align-items: center; justify-content: space-between; }
+  .mob-sheet-title { font-size: 17px; font-weight: 700; }
+  .mob-sheet-close { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: none; color: var(--ink-2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .mob-sheet-body { padding: 16px 18px 4px; display: flex; flex-direction: column; gap: 14px; }
+  .mob-sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mob-sheet-footer { padding: 12px 18px 0; display: flex; gap: 10px; }
+  .mob-sheet-footer .mob-btn-cta { font-size: 14px; padding: 13px; }
+  .mob-dur-preview { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; text-align: center; min-height: 18px; }
+
+  /* ── Mobile voice btn ── */
+  .mob-voice-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: 10px; background: var(--surface2); border: 1.5px dashed var(--border); color: var(--muted); font-size: 14px; font-family: inherit; cursor: pointer; transition: all 0.2s; }
+  .mob-voice-btn.recording { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); animation: voicePulse 1.5s ease-in-out infinite; }
+  @keyframes voicePulse { 0%,100%{box-shadow:0 0 0 0 rgba(58,110,168,0.15)} 50%{box-shadow:0 0 0 8px rgba(58,110,168,0)} }
+
+  /* ── Mobile manager ── */
+  .mob-mgr-list { display: flex; flex-direction: column; gap: 8px; }
+  .mob-mgr-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border-light); border-radius: 10px; touch-action: none; }
+  .mob-mgr-row.dragging { opacity: 0.4; }
+  .mob-mgr-row.drag-over { box-shadow: 0 0 0 2px var(--accent); }
+  .mob-mgr-row .field-input { flex: 1; background: var(--surface2); }
+  .mob-mgr-handle { font-size: 20px; color: var(--muted); cursor: grab; padding: 0 4px; flex-shrink: 0; user-select: none; touch-action: none; }
+  .mob-mgr-del { width: 32px; height: 32px; border-radius: 8px; background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mob-mgr-del:hover, .mob-mgr-del:active { color: var(--red); background: var(--red-soft); }
+
+  /* ── Mobile toast ── */
+  .mob-toast-wrap { position: fixed; bottom: calc(var(--nav-h) + var(--safe-bottom) + 14px); left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  .mob-toast { padding: 10px 20px; border-radius: 24px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); white-space: nowrap; font-family: 'DM Mono', monospace; background: var(--ink); color: #fff; animation: toastAnim 0.25s cubic-bezier(0.34,1.4,0.64,1); }
+  .mob-toast.success { background: var(--green); }
+  .mob-toast.error { background: var(--red); }
+  
+  .mob-empty { text-align: center; padding: 36px 20px; color: var(--muted); font-size: 13px; }
+  .mob-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PC LAYOUT  (hidden on mobile via CSS)
+══════════════════════════════════════════ -->
+<div class="pc-only">
+
+<header class="pc-header">
+  <div class="pc-header-inner">
+    <span class="app-title">活动计时</span>
+    <nav class="pc-tabs">
+      <button class="pc-tab-btn active" data-tab="today">今日</button>
+      <button class="pc-tab-btn" data-tab="log">记录</button>
+      <button class="pc-tab-btn" data-tab="stats">统计</button>
+    </nav>
+  </div>
+</header>
+
+<main class="pc-body">
+
+  <!-- TODAY -->
+  <div class="pc-panel active" id="pc-tab-today">
+    <div id="pc-today-date-row" style="font-size:13px;color:var(--muted);margin-bottom:14px;"></div>
+
+    <div class="pc-stats-bar">
+      <div class="stat-cell"><div class="stat-label">今日累计</div><div class="stat-value" id="pc-today-total">—</div></div>
+      <div class="stat-cell"><div class="stat-label">今日次数</div><div class="stat-value" id="pc-today-count">—</div></div>
+      <div class="stat-cell"><div class="stat-label">连续打卡</div><div class="stat-value" id="pc-today-streak">—</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="timer-panel">
+        <div class="timer-status-row">
+          <div class="status-dot" id="pc-status-dot"></div>
+          <span class="status-text" id="pc-status-text">未开始</span>
+        </div>
+        <div class="timer-display" id="pc-timer-display">00:00:00</div>
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">活动分类</label>
+            <div class="field-inline">
+              <input class="field-input" id="pc-content-note-sel" placeholder="输入或选择活动分类" list="content-type-options">
+              <div class="inline-actions"><button class="btn btn-secondary" onclick="openContentTypeManager()">编辑</button></div>
+            </div>
+            <datalist id="content-type-options"></datalist>
+          </div>
+          <div class="field-group">
+            <label class="field-label">事项名称</label>
+            <input class="field-input" id="pc-article-title-input" placeholder="例：Training AI" list="article-title-options">
+            <datalist id="article-title-options"></datalist>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="pc-btn-start" onclick="startSession()">▶ 开始计时</button>
+          <button class="btn btn-danger" id="pc-btn-end" style="display:none;" onclick="endSession()">■ 结束计时</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="section-title">最近记录</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">数据保存在当前浏览器本地。建议定期导出 CSV 备份。</div>
+        <div class="record-list" id="pc-recent-list"><div class="empty">暂无记录</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="pc-panel" id="pc-tab-log">
+    <div class="toolbar">
+      <input type="date" id="pc-filter-date">
+      <select id="pc-filter-note" style="min-width:120px;"><option value="">全部类型</option></select>
+      <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openAddModal()">＋ 手动补录</button>
+      <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="openVoiceAddModal()">🎤 语音补录</button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-secondary" style="flex:0;padding:7px 14px;" onclick="exportCSV()">↓ 导出 CSV</button>
+        <label class="btn btn-secondary" style="flex:0;padding:7px 14px;cursor:pointer;">↑ 导入 CSV<input type="file" accept=".csv" style="display:none;" onchange="importCSV(event)"></label>
+      </div>
+    </div>
+    <div class="card"><div class="card-body" style="padding:0;">
+      <table><thead><tr><th>日期</th><th>开始</th><th>结束</th><th>时长</th><th>内容</th><th>事项</th><th></th></tr></thead>
+      <tbody id="pc-log-tbody"><tr><td colspan="7" class="empty">暂无记录</td></tr></tbody></table>
+      <div id="pc-log-pager"></div>
+    </div></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="pc-panel" id="pc-tab-stats">
+    <div class="year-sel-row">
+      <button class="year-btn" onclick="changeYear(-1)">‹</button>
+      <span class="year-display" id="pc-stats-year-display">2026</span>
+      <button class="year-btn" onclick="changeYear(1)">›</button>
+    </div>
+    <div class="stats-toolbar">
+      <select id="pc-stats-category-filter" class="field-select" style="min-width:180px;"></select>
+    </div>
+    <div class="stats-overview-card">
+      <div class="pc-stats-cards" id="pc-stats-cards"></div>
+      <div class="period-summary-wrap" id="pc-period-summary"></div>
+      <div class="stats-overview-divider"></div>
+      <div class="pc-stats-summary" id="pc-stats-summary"></div>
+      <div id="pc-stats-summary-pager"></div>
+      <div id="pc-article-detail-wrap" style="margin-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;" id="pc-article-detail-title">事项累计时长</span>
+          <select id="pc-article-sel" class="field-select" style="width:auto;min-width:180px;font-size:12px;padding:4px 8px;" onchange="handleArticleDetailSelect()"></select>
+        </div>
+        <div class="article-detail-wrap" id="pc-article-detail"></div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">本周学习时段（甘特图）</div>
+      <div class="week-nav-row" style="justify-content:space-between;">
+        <button class="week-nav-btn" onclick="changeWeek(-1)">‹ 上周</button>
+        <span class="week-nav-label" id="pc-week-heatmap-label" style="flex:1;text-align:center;"></span>
+        <button class="week-nav-btn" onclick="changeWeek(1)">下周 ›</button>
+      </div>
+      <div class="week-gantt-wrap">
+        <div class="week-gantt-axis" id="pc-gantt-axis"></div>
+        <div class="week-gantt-rows" id="pc-week-gantt"></div>
+      </div>
+      <div id="week-gantt-tooltip" class="week-gantt-tooltip"></div>
+      <div class="week-summary" id="pc-week-summary"></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title" id="pc-heatmap-title">全年活动热力图</div>
+      <div class="heatmap-scroll"><div class="heatmap" id="pc-heatmap"></div></div>
+      <div class="heatmap-legend">少
+        <div class="legend-cell" style="background:var(--heat-0)"></div>
+        <div class="legend-cell" style="background:var(--heat-1)"></div>
+        <div class="legend-cell" style="background:var(--heat-2)"></div>
+        <div class="legend-cell" style="background:var(--heat-3)"></div>
+        <div class="legend-cell" style="background:var(--heat-4)"></div>多
+      </div>
+      <div id="pc-heatmap-day-detail" style="display:none;margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border-light);">
+        <div style="font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:8px;" id="pc-heatmap-day-title"></div>
+        <div id="pc-heatmap-day-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+        <div id="pc-heatmap-day-pager"></div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title" id="pc-daily-chart-title">当月每日时长</div>
+      <div class="bar-chart pc-bar-chart" id="pc-bar-chart-daily"></div>
+      <div class="chart-detail" id="pc-daily-chart-detail">点击柱子查看具体数值</div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title" id="pc-monthly-chart-title">各月累计时长</div>
+      <div class="bar-chart pc-bar-chart" id="pc-bar-chart-monthly"></div>
+      <div class="chart-detail" id="pc-monthly-chart-detail">点击柱子查看具体数值</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- PC Add/Edit Modal -->
+<div class="overlay" id="pc-add-modal">
+  <div class="pc-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="pc-modal-title">手动补录记录</span>
+      <button class="modal-close" onclick="closeAddModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="voice-status" id="pc-voice-status"></div>
+      <button class="voice-btn-pc" id="pc-voice-btn" onclick="startVoiceFill()">🎤 <span id="pc-voice-btn-text">点击语音录入</span></button>
+      <div class="field-group"><label class="field-label" id="pc-m-date-label">日期 *</label><input type="date" class="field-input" id="pc-m-date"></div>
+      <div class="field-group" id="pc-m-end-date-wrap" style="display:none;"><label class="field-label">结束日期 *</label><input type="date" class="field-input" id="pc-m-end-date"></div>
+      <div class="modal-row" id="pc-m-range-time-row" style="display:none;">
+        <div class="field-group"><label class="field-label">开始时间（可选）</label><input type="time" step="60" class="field-input" id="pc-m-range-start-time"></div>
+        <div class="field-group"><label class="field-label">结束时间（可选）</label><input type="time" step="60" class="field-input" id="pc-m-range-end-time"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field-group"><label class="field-label">开始时间 *</label><input type="time" step="1" class="field-input" id="pc-m-start"></div>
+        <div class="field-group"><label class="field-label">结束时间 *</label><input type="time" step="1" class="field-input" id="pc-m-end"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field-group">
+          <label class="field-label">活动分类</label>
+          <div class="field-inline">
+            <select class="field-select" id="pc-m-note-sel"></select>
+            <div class="inline-actions"><button class="btn btn-secondary" onclick="openContentTypeManager()">编辑</button></div>
+          </div>
+          <input class="field-input" id="pc-m-note-input" placeholder="输入活动分类" style="display:none;margin-top:6px;">
+        </div>
+        <div class="field-group"><label class="field-label">事项名称</label><input type="text" class="field-input" id="pc-m-article" list="article-title-options"></div>
+      </div>
+      <div id="pc-m-duration-preview" style="font-size:12px;color:var(--muted);"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeAddModal()">取消</button>
+      <button class="btn btn-primary" style="flex:0;padding:9px 18px;" id="modal-save-btn" onclick="saveManualRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- PC Content Type Modal -->
+<div class="overlay" id="pc-content-type-modal">
+  <div class="pc-modal">
+    <div class="modal-header">
+      <span class="modal-title">管理活动分类</span>
+      <button class="modal-close" onclick="closeContentTypeManager()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--muted);">顺序会同步到所有下拉框，保存在当前浏览器本地。</div>
+      <div class="manager-list" id="pc-content-type-list"></div>
+      <button class="btn btn-secondary" style="flex:0;width:max-content;" onclick="addContentTypeRow()">＋ 新增类型</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" style="flex:0;padding:9px 18px;" onclick="closeContentTypeManager()">取消</button>
+      <button class="btn btn-primary" style="flex:0;padding:9px 18px;" onclick="saveContentTypeManager()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="pc-toast-wrap" id="pc-toast-wrap"></div>
+
+</div><!-- /pc-only -->
+
+
+<!-- ══════════════════════════════════════════
+     MOBILE LAYOUT  (hidden on PC via CSS)
+══════════════════════════════════════════ -->
+<div class="mobile-only">
+<div class="mob-app">
+  <div class="mob-page-wrap">
+
+    <!-- TODAY -->
+    <div class="mob-page active" id="mob-page-today">
+      <div class="mob-hero">
+        <div class="mob-date" id="mob-today-date"></div>
+        <div class="mob-stats-row">
+          <div class="mob-stat"><div class="mob-stat-label">今日</div><div class="mob-stat-val" id="mob-today-total">0<span class="mob-stat-unit">m</span></div></div>
+          <div class="mob-stat"><div class="mob-stat-label">次数</div><div class="mob-stat-val" id="mob-today-count">0<span class="mob-stat-unit">次</span></div></div>
+          <div class="mob-stat"><div class="mob-stat-label">连续</div><div class="mob-stat-val" id="mob-today-streak">0<span class="mob-stat-unit">天</span></div></div>
+        </div>
+      </div>
+
+      <div class="mob-timer-card">
+        <div class="mob-timer-inner">
+          <div class="mob-status-row">
+            <div class="status-dot" id="mob-status-dot"></div>
+            <span class="mob-status-text" id="mob-status-text">未开始</span>
+          </div>
+          <div class="mob-timer-display" id="mob-timer-display">00:00:00</div>
+          <div class="mob-field-stack">
+            <div class="mob-field-wrap">
+              <div class="mob-field-lbl">活动分类</div>
+          <div class="mob-field-row">
+                <input class="field-input" id="mob-content-note-sel" placeholder="输入或选择活动分类" list="content-type-options" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;">
+                <button class="mob-edit-btn" onclick="openContentTypeManager()">编辑</button>
+              </div>
+            </div>
+            <div class="mob-field-wrap">
+              <div class="mob-field-lbl">事项名称</div>
+              <input class="field-input" id="mob-article-title-input" placeholder="例：Training AI" list="article-title-options" style="background:var(--surface2);padding:11px 12px;font-size:14px;">
+            </div>
+          </div>
+          <div class="mob-cta-row">
+            <button class="mob-btn-cta mob-btn-start" id="mob-btn-start" onclick="startSession()">▶ 开始计时</button>
+            <button class="mob-btn-cta mob-btn-stop" id="mob-btn-end" style="display:none;" onclick="endSession()">■ 结束</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:14px;"></div>
+      <div class="mob-section-hd">最近记录</div>
+      <div class="mob-record-list" id="mob-recent-list">
+        <div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;padding:10px 20px;">数据保存在浏览器本地，建议定期导出 CSV 备份</div>
+    </div>
+
+    <!-- LOG -->
+    <div class="mob-page" id="mob-page-log">
+      <div class="mob-page-hd">记录</div>
+      <div class="mob-toolbar">
+        <label class="mob-chip mob-date-chip" id="mob-filter-date-chip">
+          <span id="mob-filter-date-text" class="mob-date-chip-text">选择日期</span>
+          <input type="date" id="mob-filter-date" aria-label="选择日期">
+        </label>
+        <select class="mob-chip" id="mob-filter-note"><option value="">全部类型</option></select>
+      </div>
+      <div class="mob-action-chips">
+        <button class="mob-action-chip prim" onclick="openAddModal()">＋ 手动补录</button>
+        <button class="mob-action-chip prim" onclick="openVoiceAddModal()">🎤 语音补录</button>
+      </div>
+      <div class="mob-log-list" id="mob-log-list">
+        <div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>
+      </div>
+      <div id="mob-log-pager"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="mob-page" id="mob-page-stats">
+      <div class="mob-stats-hero">
+        <div class="mob-year-nav">
+          <button class="mob-year-btn" onclick="changeYear(-1)">‹</button>
+          <div class="mob-year-val" id="mob-stats-year-display">2026</div>
+          <button class="mob-year-btn" onclick="changeYear(1)">›</button>
+        </div>
+        <div class="mob-sc-cards" id="mob-stats-cards"></div>
+      </div>
+      <div class="mob-filter-wrap">
+        <select class="field-select" id="mob-stats-category-filter"><option value="">全部分类</option></select>
+      </div>
+      <div class="mob-stats-section">
+        <div class="mob-period-summary" id="mob-period-summary"></div>
+        <div class="mob-stats-section-title">分类时长</div>
+        <div class="mob-cat-list" id="mob-cat-list"></div>
+        <div id="mob-cat-pager" style="margin-bottom:16px;"></div>
+        <div class="mob-stats-section-title" id="mob-article-detail-title">事项累计时长</div>
+        <div class="mob-article-sel-wrap">
+          <select id="mob-article-sel" class="field-select" style="font-size:13px;padding:8px 10px;background:var(--surface);" onchange="handleArticleDetailSelect()"></select>
+        </div>
+        <div id="mob-article-detail" style="margin-top:10px;margin-bottom:16px;"></div>
+        <div class="mob-stats-section-title">本周学习时段</div>
+        <div class="mob-chart-wrap" style="padding:12px 10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <button class="mob-year-btn" onclick="changeWeek(-1)" style="font-size:14px;">‹</button>
+            <span id="mob-week-heatmap-label" style="font-size:12px;font-weight:600;color:var(--ink-2);text-align:center;flex:1;"></span>
+            <button class="mob-year-btn" onclick="changeWeek(1)" style="font-size:14px;">›</button>
+          </div>
+          <div class="mob-gantt-axis" id="mob-gantt-axis"></div>
+          <div id="mob-week-gantt" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div id="mob-week-summary" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);"></div>
+        </div>
+        <div class="mob-stats-section-title" id="mob-heatmap-title">全年热力图</div>
+        <div class="mob-heatmap-wrap"><div id="mob-heatmap" style="min-width:max-content;"></div>
+          <div class="mob-hm-legend">少
+            <div class="mob-hm-leg" style="background:var(--heat-0)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-1)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-2)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-3)"></div>
+            <div class="mob-hm-leg" style="background:var(--heat-4)"></div>多
+          </div>
+        </div>
+        <div class="mob-chart-wrap">
+          <div class="mob-chart-title" id="mob-daily-chart-title">当月每日时长</div>
+          <div class="bar-chart mob-bar-chart" id="mob-bar-chart-daily"></div>
+          <div class="chart-detail" id="mob-daily-chart-detail">点击查看数值</div>
+        </div>
+        <div class="mob-chart-wrap">
+          <div class="mob-chart-title" id="mob-monthly-chart-title">各月累计时长</div>
+          <div class="bar-chart mob-bar-chart" id="mob-bar-chart-monthly"></div>
+          <div class="chart-detail" id="mob-monthly-chart-detail">点击查看数值</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- mob-page-wrap -->
+
+  <nav class="mob-nav">
+    <button class="mob-nav-item active" onclick="mobSwitchPage('today',this)"><div class="mob-nav-icon">⏱</div><div class="mob-nav-label">今日</div></button>
+    <button class="mob-nav-item" onclick="mobSwitchPage('log',this)"><div class="mob-nav-icon">📋</div><div class="mob-nav-label">记录</div></button>
+    <button class="mob-nav-item" onclick="mobSwitchPage('stats',this)"><div class="mob-nav-icon">📊</div><div class="mob-nav-label">统计</div></button>
+  </nav>
+</div><!-- mob-app -->
+
+<!-- Mobile Add/Edit Sheet -->
+<div class="mob-sheet-overlay" id="mob-add-modal" onclick="if(event.target===this)closeAddModal()">
+  <div class="mob-sheet">
+    <div class="mob-sheet-handle"></div>
+    <div class="mob-sheet-header">
+      <span class="mob-sheet-title" id="mob-modal-title">手动补录</span>
+      <button class="mob-sheet-close" onclick="closeAddModal()">×</button>
+    </div>
+    <div class="mob-sheet-body">
+      <div class="voice-status" id="mob-voice-status"></div>
+      <button class="mob-voice-btn" id="mob-voice-btn" onclick="startVoiceFill()">
+        <span id="mob-voice-btn-icon">🎤</span><span id="mob-voice-btn-text">点击开始语音录入</span>
+      </button>
+      <div class="mob-field-wrap"><div class="mob-field-lbl" id="mob-m-date-label">日期 *</div><input type="date" class="field-input" id="mob-m-date" style="background:var(--surface2);"></div>
+      <div class="mob-field-wrap" id="mob-m-end-date-wrap" style="display:none;"><div class="mob-field-lbl">结束日期 *</div><input type="date" class="field-input" id="mob-m-end-date" style="background:var(--surface2);"></div>
+      <div class="mob-sheet-row" id="mob-m-range-time-row" style="display:none;">
+        <div class="mob-field-wrap"><div class="mob-field-lbl">开始时间（可选）</div><input type="time" step="60" class="field-input" id="mob-m-range-start-time" style="background:var(--surface2);"></div>
+        <div class="mob-field-wrap"><div class="mob-field-lbl">结束时间（可选）</div><input type="time" step="60" class="field-input" id="mob-m-range-end-time" style="background:var(--surface2);"></div>
+      </div>
+      <div class="mob-sheet-row">
+        <div class="mob-field-wrap"><div class="mob-field-lbl">开始时间 *</div><input type="time" step="1" class="field-input" id="mob-m-start" style="background:var(--surface2);"></div>
+        <div class="mob-field-wrap"><div class="mob-field-lbl">结束时间 *</div><input type="time" step="1" class="field-input" id="mob-m-end" style="background:var(--surface2);"></div>
+      </div>
+      <div class="mob-dur-preview" id="mob-m-duration-preview"></div>
+      <div class="mob-field-wrap">
+        <div class="mob-field-lbl">活动分类</div>
+        <div class="mob-field-row">
+          <select class="field-select" id="mob-m-note-sel" style="flex:1;background:var(--surface2);padding:11px 12px;font-size:14px;"></select>
+          <button class="mob-edit-btn" onclick="openContentTypeManager()">编辑</button>
+        </div>
+        <input class="field-input" id="mob-m-note-input" placeholder="输入活动分类" style="display:none;margin-top:8px;background:var(--surface2);">
+      </div>
+      <div class="mob-field-wrap"><div class="mob-field-lbl">事项名称</div><input type="text" class="field-input" id="mob-m-article" list="article-title-options" placeholder="可选" style="background:var(--surface2);padding:11px 12px;font-size:14px;"></div>
+    </div>
+    <div class="mob-sheet-footer">
+      <button class="mob-btn-cta mob-btn-stop" style="flex:0;padding:12px 18px;" onclick="closeAddModal()">取消</button>
+      <button class="mob-btn-cta mob-btn-start" id="mob-modal-save-btn" onclick="saveManualRecord()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Content Type Sheet -->
+<div class="mob-sheet-overlay" id="mob-content-type-modal" onclick="if(event.target===this)closeContentTypeManager()">
+  <div class="mob-sheet">
+    <div class="mob-sheet-handle"></div>
+    <div class="mob-sheet-header">
+      <span class="mob-sheet-title">管理活动分类</span>
+      <button class="mob-sheet-close" onclick="closeContentTypeManager()">×</button>
+    </div>
+    <div class="mob-sheet-body">
+      <div style="font-size:12px;color:var(--muted);">顺序同步到所有下拉框，保存在当前浏览器本地。</div>
+      <div class="mob-mgr-list" id="mob-content-type-list"></div>
+      <button class="mob-action-chip" onclick="addContentTypeRow()" style="align-self:flex-start;">＋ 新增类型</button>
+    </div>
+    <div class="mob-sheet-footer">
+      <button class="mob-btn-cta mob-btn-stop" style="flex:0;padding:12px 18px;" onclick="closeContentTypeManager()">取消</button>
+      <button class="mob-btn-cta mob-btn-start" onclick="saveContentTypeManager()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="mob-toast-wrap" id="mob-toast-wrap"></div>
+
+</div><!-- /mobile-only -->
+
+
+<script>
+// ════════════════════════════════════════════════════════
+// DEVICE DETECTION
+// ════════════════════════════════════════════════════════
+const isMobile = () => window.innerWidth < 768;
+
+// ════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ════════════════════════════════════════════════════════
+const STORAGE_KEY = 'english_sessions';
+const ACTIVE_KEY  = 'english_active_session';
+const CONTENT_TYPE_KEY = 'english_content_types';
+const ARTICLE_TITLES_KEY = 'english_article_titles';
+const LAST_INPUT_KEY = 'english_last_input';
+const DEFAULT_CONTENT_NOTE_OPTIONS = [];
+const REMOVED_CONTENT_NOTE_OPTIONS = ['英语学习','网球','打网球'];
+const REMOVED_ARTICLE_TITLES = ['The search for oil'];
+const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
+const STATS_FILTER_ALL = '';
+const STATS_FILTER_NO_PERIOD = '__exclude_period__';
+const CONTENT_TYPE_SUGGESTION_LIMIT = 6;
+const ARTICLE_TITLE_SUGGESTION_LIMIT = 6;
+
+let timerInterval = null;
+let statsYear = null;
+let editingRecordId = null;
+let recognition = null;
+let recognitionActive = false;
+let statsCategoryFilter = STATS_FILTER_ALL;
+let weekOffset = 0; // 0 = current week, -1 = last week, etc.
+const PAGE_SIZE = 5;
+const LOG_PAGE_SIZE = 10;
+const paginationState = {
+  pcLog: 1,
+  mobLog: 1,
+  pcCategory: 1,
+  mobCategory: 1,
+  pcArticle: 1,
+  mobArticle: 1,
+  pcWeekSummary: 1,
+  mobWeekSummary: 1,
+  pcHeatmapDay: 1
+};
+const DAILY_CHART_MAX_MINUTES = 12 * 60;
+const MONTHLY_CHART_MAX_MINUTES = 150 * 60;
+
+// ════════════════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════════════════
+function getSessions(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}}
+function saveSessions(a){localStorage.setItem(STORAGE_KEY,JSON.stringify(a))}
+function getActive(){try{return JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null')}catch{return null}}
+function saveActive(o){if(o)localStorage.setItem(ACTIVE_KEY,JSON.stringify(o));else localStorage.removeItem(ACTIVE_KEY)}
+function normalizeCategoryValue(v){const t=String(v||'').trim();if(LEGACY_ENGLISH_CATEGORIES.includes(t))return'英语学习';if(t==='月经')return'Period';return t}
+function normalizeDateValue(v){const t=String(v||'').trim();if(!t)return'';const n=t.replace(/[./]/g,'-').replace(/年/g,'-').replace(/月/g,'-').replace(/日/g,'').replace(/\s+/g,'');const m=n.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(!m)return t;return`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`}
+function isRemovedContentType(v){return REMOVED_CONTENT_NOTE_OPTIONS.includes(normalizeCategoryValue(v))}
+function isRemovedArticleTitle(v){return REMOVED_ARTICLE_TITLES.includes(String(v||'').trim())}
+function getContentTypeOptions(){try{const s=JSON.parse(localStorage.getItem(CONTENT_TYPE_KEY)||'null');if(Array.isArray(s)){const c=s.map(v=>normalizeCategoryValue(v)).filter(v=>v&&!isRemovedContentType(v));if(c.length)return[...new Set(c)]}}catch{}return[...DEFAULT_CONTENT_NOTE_OPTIONS]}
+function saveContentTypeOptions(a){const c=[...new Set(a.map(v=>normalizeCategoryValue(v)).filter(v=>v&&!isRemovedContentType(v)))];localStorage.setItem(CONTENT_TYPE_KEY,JSON.stringify(c.length?c:DEFAULT_CONTENT_NOTE_OPTIONS))}
+function ensureContentTypeExists(v){const t=normalizeCategoryValue(v);if(!t)return;const o=getContentTypeOptions();if(!o.includes(t)){o.push(t);saveContentTypeOptions(o)}}
+function getContentTypeSuggestions(){return getContentTypeOptions().slice(0,CONTENT_TYPE_SUGGESTION_LIMIT)}
+function rememberContentType(v){const t=normalizeCategoryValue(v);if(!t||isRemovedContentType(t))return;const a=getContentTypeOptions().filter(i=>i!==t);a.unshift(t);saveContentTypeOptions(a)}
+function rememberContentTypeInputValue(v){
+  const before=JSON.stringify(getContentTypeOptions());
+  rememberContentType(v);
+  if(JSON.stringify(getContentTypeOptions())!==before)refreshContentTypeUI();
+}
+function getArticleTitles(){try{const s=JSON.parse(localStorage.getItem(ARTICLE_TITLES_KEY)||'[]');if(Array.isArray(s))return[...new Set(s.map(v=>String(v||'').trim()).filter(v=>v&&!isRemovedArticleTitle(v)))]}catch{}return[]}
+function getArticleTitleSuggestions(){return getArticleTitles().slice(0,ARTICLE_TITLE_SUGGESTION_LIMIT)}
+function rememberArticleTitle(v){const t=String(v||'').trim();if(!t||isRemovedArticleTitle(t))return;const a=getArticleTitles().filter(i=>i!==t);a.unshift(t);localStorage.setItem(ARTICLE_TITLES_KEY,JSON.stringify(a.slice(0,100)))}
+function getLastInput(){try{return JSON.parse(localStorage.getItem(LAST_INPUT_KEY)||'null')||{}}catch{return{}}}
+function saveLastInput(note,article){localStorage.setItem(LAST_INPUT_KEY,JSON.stringify({note:isRemovedContentType(note)?'':note||'',article:isRemovedArticleTitle(article)?'':article||''}))}
+
+// ════════════════════════════════════════════════════════
+// DATE / TIME
+// ════════════════════════════════════════════════════════
+function localDateStr(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function localTimeStr(d=new Date()){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')}
+function timeStrToDate(ds,ts){return new Date(normalizeDateValue(ds)+'T'+ts)}
+function diffMinutesFloor(s,e){return Math.floor((e-s)/60000)}
+function fmtMinutes(m){if(!m&&m!==0)return'—';const h=Math.floor(m/60),mm=m%60;return h>0?`${h}h ${mm}m`:`${mm}m`}
+function fmtHours(m,d=1){return`${((Number(m)||0)/60).toFixed(d)}h`}
+function fmtElapsed(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0')}
+function todayStr(){return localDateStr()}
+function addDays(dateStr,days){const d=new Date(normalizeDateValue(dateStr));d.setDate(d.getDate()+days);return localDateStr(d)}
+function uid(){if(crypto.randomUUID)return crypto.randomUUID().replace(/-/g,'').slice(0,12);return Math.random().toString(36).slice(2,10)+Date.now().toString(36)}
+function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function toFullTime(v){if(!v)return'';return v.length===5?v+':00':v}
+function toInputTime(v){return v?v.slice(0,5):''}
+function isRangeCategory(note){return normalizeCategoryValue(note)==='Period'}
+function resolveRange(date,startTime,endTime,crossDay=false){
+  const start=timeStrToDate(date,startTime),endBase=timeStrToDate(date,endTime);
+  const overnight=crossDay||endBase<start;
+  return{start,end:overnight?new Date(endBase.getTime()+86400000):endBase,crossDay:overnight};
+}
+function displayEndTime(session){return `${session.cross_day?'次日 ':''}${(session.end_time||'—').slice(0,5)}`}
+function diffDaysInclusive(startDate,endDate){return Math.floor((timeStrToDate(endDate,'00:00:00')-timeStrToDate(startDate,'00:00:00'))/86400000)+1}
+function isRangeRecord(session){return session.record_type==='range'||(normalizeCategoryValue(session.content_note)==='Period'&&!!session.end_date)}
+function formatDateTime(date,time){return time?`${date} ${time.slice(0,5)}`:date}
+function formatRecordRange(session){const start=formatDateTime(session.date,session.range_start_time||'');const end=formatDateTime(session.end_date||session.date,session.range_end_time||'');return start===end?start:`${start} ~ ${end}`}
+function formatRecordDuration(session){return isRangeRecord(session)?`${diffDaysInclusive(session.date,session.end_date||session.date)}天`:fmtMinutes(session.duration_minutes)}
+function formatRecordPrimary(session){return isRangeRecord(session)?formatRecordRange(session):`${session.start_time.slice(0,5)} – ${displayEndTime(session)}`}
+function addMinutesToDayMap(dayMap,date,minutes){
+  if(minutes<=0||!date)return;
+  if(!dayMap[date])dayMap[date]={minutes:0,count:0};
+  dayMap[date].minutes+=minutes;
+  dayMap[date].count++;
+}
+function expandSessionToDayMinutes(session){
+  const entries=[];
+  if(isRangeRecord(session)){
+    let cur=normalizeDateValue(session.date),endDate=normalizeDateValue(session.end_date||session.date);
+    while(cur&&cur<=endDate){
+      let minutes=24*60;
+      if(cur===session.date&&session.range_start_time)minutes=24*60-(parseInt(session.range_start_time.slice(0,2),10)*60+parseInt(session.range_start_time.slice(3,5),10));
+      if(cur===endDate&&session.range_end_time){
+        const endMinutes=parseInt(session.range_end_time.slice(0,2),10)*60+parseInt(session.range_end_time.slice(3,5),10);
+        minutes=cur===session.date&&session.range_start_time?Math.max(0,endMinutes-(parseInt(session.range_start_time.slice(0,2),10)*60+parseInt(session.range_start_time.slice(3,5),10))):endMinutes;
+      }
+      entries.push({date:cur,minutes:Math.max(0,minutes)});
+      cur=addDays(cur,1);
+    }
+    return entries;
+  }
+  const start=session.start_time?toFullTime(session.start_time):'';
+  const end=session.end_time?toFullTime(session.end_time):'';
+  if(!session.date||!start||!end)return entries;
+  const range=resolveRange(session.date,start,end,!!session.cross_day);
+  const startDate=normalizeDateValue(session.date),endDate=normalizeDateValue(localDateStr(range.end));
+  if(startDate===endDate){entries.push({date:startDate,minutes:Math.max(0,diffMinutesFloor(range.start,range.end))});return entries}
+  const startMinutes=24*60-(range.start.getHours()*60+range.start.getMinutes());
+  const endMinutes=range.end.getHours()*60+range.end.getMinutes();
+  entries.push({date:startDate,minutes:Math.max(0,startMinutes)});
+  let cur=addDays(startDate,1);
+  while(cur&&cur<endDate){entries.push({date:cur,minutes:24*60});cur=addDays(cur,1)}
+  entries.push({date:endDate,minutes:Math.max(0,endMinutes)});
+  return entries;
+}
+
+// ════════════════════════════════════════════════════════
+// UI HELPERS — dual target (PC + mobile selectors)
+// ════════════════════════════════════════════════════════
+function $id(id){return document.getElementById(id)}
+function getPageSize(key){return key==='pcLog'||key==='mobLog'?LOG_PAGE_SIZE:PAGE_SIZE}
+function paginate(key,items,pageSize=getPageSize(key)){
+  const total=items.length;
+  const totalPages=Math.max(1,Math.ceil(total/pageSize));
+  const page=Math.min(Math.max(parseInt(paginationState[key],10)||1,1),totalPages);
+  paginationState[key]=page;
+  const start=(page-1)*pageSize;
+  return{items:items.slice(start,start+pageSize),page,totalPages,total,start};
+}
+function renderPager(key,total,pagerId){
+  const el=$id(pagerId);if(!el)return;
+  const pageSize=getPageSize(key);
+  const totalPages=Math.ceil(total/pageSize);
+  if(totalPages<=1){el.innerHTML='';return}
+  const page=Math.min(Math.max(parseInt(paginationState[key],10)||1,1),totalPages);
+  el.innerHTML=`<div class="pager">
+    <button class="pager-btn" onclick="setPage('${key}',${page-1})" ${page<=1?'disabled':''}>上一页</button>
+    <span class="pager-info">${page} / ${totalPages} · 共 ${total} 条</span>
+    <button class="pager-btn" onclick="setPage('${key}',${page+1})" ${page>=totalPages?'disabled':''}>下一页</button>
+  </div>`;
+}
+function setPage(key,page){
+  paginationState[key]=page;
+  if(key==='pcLog'||key==='mobLog')renderLog();
+  else if(key==='pcCategory'||key==='mobCategory')renderStats();
+  else if(key==='pcArticle'||key==='mobArticle')renderArticleDetailSelected();
+  else if(key==='pcWeekSummary'||key==='mobWeekSummary')renderWeekHourHeatmap();
+  else if(key==='pcHeatmapDay'){const panel=$id('pc-heatmap-day-detail');if(panel?.dataset.activeDate)showHeatmapDayDetail(panel.dataset.activeDate,true)}
+}
+function resetPages(keys){keys.forEach(key=>{paginationState[key]=1})}
+function getModalRootByMode(mobile=isMobile()){return mobile?$id('mob-add-modal'):$id('pc-add-modal')}
+function getActiveModalRoot(){return getModalRootByMode()}
+function modalFieldId(name,root=getActiveModalRoot()){
+  if(!root)return'';
+  const prefix=root.id==='mob-add-modal'?'mob':'pc';
+  return `${prefix}-${name}`;
+}
+function modalField(name,root=getActiveModalRoot()){const id=modalFieldId(name,root);return id?$id(id):null}
+function forEachModalRoot(fn){[getModalRootByMode(false),getModalRootByMode(true)].forEach(root=>{if(root)fn(root)})}
+function renderContentTypeSelect(selectId,label='请选择',empty='',keep=''){
+  const sel=$id(selectId);if(!sel)return;
+  const cur=keep||sel.value,opts=getContentTypeOptions();
+  sel.innerHTML=`<option value="${escapeHtml(empty)}">${escapeHtml(label)}</option>`+opts.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')+'<option value="__custom__">自定义…</option>';
+  if(cur&&(opts.includes(cur)||cur==='__custom__'||cur===empty))sel.value=cur;
+  else if(cur)sel.value='__custom__';
+  else sel.value=empty;
+}
+function refreshContentTypeSuggestions(){
+  const el=$id('content-type-options');if(!el)return;
+  el.innerHTML=getContentTypeSuggestions().map(o=>`<option value="${escapeHtml(o)}"></option>`).join('');
+}
+function renderModalContentTypeSelects(){
+  const opts=getContentTypeOptions();
+  forEachModalRoot(root=>{
+    const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root);
+    if(!sel)return;
+    const cur=(inp&&inp.style.display!=='none'&&inp.value.trim())?inp.value.trim():sel.value;
+    sel.innerHTML='<option value="">请选择</option>'+opts.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')+'<option value="__custom__">自定义…</option>';
+    if(cur&&opts.includes(cur)){sel.value=cur;if(inp){inp.value='';inp.style.display='none'}}
+    else if(cur){sel.value='__custom__';if(inp){inp.value=cur;inp.style.display=''}}
+    else{sel.value='';if(inp){inp.value='';inp.style.display='none'}}
+  });
+}
+function refreshContentTypeUI(){
+  refreshContentTypeSuggestions();
+  renderModalContentTypeSelects();
+  ['pc-filter-note','mob-filter-note'].forEach(id=>{
+    const el=$id(id);if(!el)return;const cur=el.value;
+    el.innerHTML='<option value="">全部类型</option>'+getContentTypeOptions().map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    if(cur&&getContentTypeOptions().includes(cur))el.value=cur;
+  });
+  ['pc-stats-category-filter','mob-stats-category-filter'].forEach(id=>{
+    const el=$id(id);if(!el)return;
+    const statOptions=getContentTypeOptions(); // include all, including Period
+    const isSpecialFilter=statsCategoryFilter===STATS_FILTER_ALL||statsCategoryFilter===STATS_FILTER_NO_PERIOD;
+    const kv=statOptions.includes(statsCategoryFilter)||isSpecialFilter?statsCategoryFilter:STATS_FILTER_ALL;
+    el.innerHTML=`<option value="${STATS_FILTER_ALL}">全部分类</option><option value="${STATS_FILTER_NO_PERIOD}">不含 Period</option>`+statOptions.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    el.value=kv;statsCategoryFilter=kv;
+  });
+}
+function refreshArticleTitleUI(){
+  $id('article-title-options').innerHTML=getArticleTitleSuggestions().map(t=>`<option value="${escapeHtml(t)}"></option>`).join('');
+}
+function updatePrimaryActionLabels(){
+  const label=isRangeCategory(getContentNote())?'记录区间':'▶ 开始计时';
+  if($id('pc-btn-start'))$id('pc-btn-start').textContent=label;
+  if($id('mob-btn-start'))$id('mob-btn-start').textContent=label;
+}
+function hydratePreferencesFromSessions(){
+  const sessions=getSessions();
+  const migrated=sessions.map(s=>({...s,date:normalizeDateValue(s.date),content_note:normalizeCategoryValue(s.content_note)}));
+  if(JSON.stringify(migrated)!==JSON.stringify(sessions))saveSessions(migrated);
+  const active=getActive();
+  if(active){const ma={...active,date:normalizeDateValue(active.date),content_note:normalizeCategoryValue(active.content_note)};if(JSON.stringify(ma)!==JSON.stringify(active))saveActive(ma)}
+  // Only add new categories from sessions that don't already exist in saved list
+  // Do NOT reset ordering — respect what user saved
+  const existing=getContentTypeOptions();
+  const titles=getArticleTitles();
+  let changed=false;
+  migrated.forEach(s=>{
+    const n=normalizeCategoryValue(s.content_note);
+    const a=String(s.article_title||'').trim();
+    if(n&&!isRemovedContentType(n)&&!existing.includes(n)){existing.push(n);changed=true;}
+    if(a&&!isRemovedArticleTitle(a)&&!titles.includes(a))titles.push(a);
+  });
+  if(changed)saveContentTypeOptions(existing);
+  localStorage.setItem(ARTICLE_TITLES_KEY,JSON.stringify(titles.slice(0,100)));
+}
+
+// ════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════
+// PC nav
+document.querySelectorAll('.pc-tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.pc-tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.pc-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    $id('pc-tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='log')renderLog();
+    if(btn.dataset.tab==='stats')renderStats();
+  });
+});
+// Mobile nav
+function mobSwitchPage(name,btn){
+  document.querySelectorAll('.mob-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.mob-nav-item').forEach(b=>b.classList.remove('active'));
+  $id('mob-page-'+name).classList.add('active');
+  btn.classList.add('active');
+  document.querySelector('.mob-page-wrap').scrollTop=0;
+  if(name==='log')renderLog();
+  if(name==='stats')renderStats();
+}
+
+// ════════════════════════════════════════════════════════
+// TIMER
+// ════════════════════════════════════════════════════════
+function todaySessions(){const t=todayStr();return getSessions().filter(s=>normalizeDateValue(s.date)===t&&s.status==='completed')}
+function calcStreakFromSessions(list){
+  const sessions=list.filter(s=>s.status==='completed'&&s.duration_minutes>0).map(s=>({...s,date:normalizeDateValue(s.date),content_note:normalizeCategoryValue(s.content_note)}));
+  const days=[...new Set(sessions.map(s=>s.date))].sort();
+  if(!days.length)return 0;
+  const today=todayStr();let streak=0,cur=today;
+  for(let i=days.length-1;i>=0;i--){if(days[i]===cur){streak++;const d=new Date(cur);d.setDate(d.getDate()-1);cur=localDateStr(d)}else if(days[i]<cur){if(streak===0){streak=0;break}break}}
+  if(streak===0){const y=new Date();y.setDate(y.getDate()-1);const yd=localDateStr(y);let s2=0,c2=yd;for(let i=days.length-1;i>=0;i--){if(days[i]===c2){s2++;const d=new Date(c2);d.setDate(d.getDate()-1);c2=localDateStr(d)}else if(days[i]<c2)break}streak=s2}
+  return streak;
+}
+function calcStreak(){return calcStreakFromSessions(getSessions())}
+
+function getPCContentNote(){return normalizeCategoryValue($id('pc-content-note-sel').value)}
+function getMobContentNote(){return normalizeCategoryValue($id('mob-content-note-sel').value)}
+function getContentNote(){return isMobile()?getMobContentNote():getPCContentNote()}
+function getPCArticle(){return $id('pc-article-title-input').value.trim()}
+function getMobArticle(){return $id('mob-article-title-input').value.trim()}
+function getArticleTitle(){return isMobile()?getMobArticle():getPCArticle()}
+
+function startSession(){
+  if(getActive()){showToast('已有进行中的计时，请先结束','error');return}
+  const note=getContentNote(),article=getArticleTitle();
+  if(!note){showToast('请先选择活动分类','error');return}
+  if(isRangeCategory(note)){
+    openAddModal();
+    const root=getActiveModalRoot();
+    setModalContentNote(note,root);
+    const articleField=modalField('m-article',root);
+    if(articleField)articleField.value=article;
+    updateModalMode(root,note);
+    updateDurationPreview(root);
+    showToast('Period 请记录开始日期和结束日期','success');
+    return;
+  }
+  rememberContentType(note);rememberArticleTitle(article);
+  const now=new Date();
+  saveActive({id:uid(),date:normalizeDateValue(localDateStr(now)),start_time:localTimeStr(now),end_time:'',duration_minutes:'',content_note:note,article_title:article,status:'active',record_type:'timer'});
+  refreshContentTypeUI();refreshArticleTitleUI();
+  showToast('计时开始','success');updateTimerUI();startTick();
+}
+function endSession(){
+  const active=getActive();if(!active)return;
+  const now=new Date(),dur=diffMinutesFloor(timeStrToDate(active.date,active.start_time),now);
+  if(dur<0){showToast('时间异常','error');return}
+  if(dur===0){showToast('计时不足1分钟，未保存','warning');saveActive(null);clearInterval(timerInterval);timerInterval=null;resetInputs();updateTimerUI();return}
+  const note=getContentNote()||active.content_note,article=getArticleTitle()||active.article_title;
+  rememberContentType(note);rememberArticleTitle(article);
+  const sessions=getSessions();
+  sessions.push({...active,end_time:localTimeStr(now),duration_minutes:dur,content_note:note,article_title:article,status:'completed',cross_day:normalizeDateValue(localDateStr(now))!==normalizeDateValue(active.date),record_type:'timer'});
+  saveSessions(sessions);saveActive(null);
+  saveLastInput(note,article);
+  refreshContentTypeUI();refreshArticleTitleUI();
+  clearInterval(timerInterval);timerInterval=null;
+  showToast(`计时结束，本次 ${fmtMinutes(dur)}`,'success');
+  resetInputs();updateTimerUI();renderAll();
+}
+function resetInputs(){
+  ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{const el=$id(id);if(el)el.value=''});
+  ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=''});
+  updatePrimaryActionLabels();
+}
+function startTick(){clearInterval(timerInterval);timerInterval=setInterval(tickTimer,1000);tickTimer()}
+function tickTimer(){
+  const active=getActive();if(!active){clearInterval(timerInterval);return}
+  const elapsed=Date.now()-timeStrToDate(active.date,active.start_time).getTime();
+  const t=fmtElapsed(Math.max(0,elapsed));
+  [$id('pc-timer-display'),$id('mob-timer-display')].forEach(el=>{if(el)el.textContent=t});
+}
+
+function updateTimerUI(){
+  const active=getActive();
+  // PC
+  const pDot=$id('pc-status-dot'),pText=$id('pc-status-text'),pDisp=$id('pc-timer-display'),pStart=$id('pc-btn-start'),pEnd=$id('pc-btn-end');
+  // Mobile
+  const mDot=$id('mob-status-dot'),mText=$id('mob-status-text'),mDisp=$id('mob-timer-display'),mStart=$id('mob-btn-start'),mEnd=$id('mob-btn-end');
+  if(active){
+    [pDot,mDot].forEach(el=>{if(el)el.classList.add('running')});
+    [pText,mText].forEach(el=>{if(el)el.textContent='进行中'});
+    [pDisp,mDisp].forEach(el=>{if(el)el.classList.add('running')});
+    if(pStart)pStart.style.display='none';if(pEnd)pEnd.style.display='';
+    if(mStart)mStart.style.display='none';if(mEnd)mEnd.style.display='';
+    // restore fields
+    ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{
+      const el=$id(id);if(el)el.value=active.content_note||'';
+    });
+    ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=active.article_title||''});
+    if(!timerInterval)startTick();
+  } else {
+    [pDot,mDot].forEach(el=>{if(el)el.classList.remove('running')});
+    [pText,mText].forEach(el=>{if(el)el.textContent='未开始'});
+    [pDisp,mDisp].forEach(el=>{if(el){el.classList.remove('running');el.textContent='00:00:00'}});
+    if(pStart)pStart.style.display='';if(pEnd)pEnd.style.display='none';
+    if(mStart)mStart.style.display='';if(mEnd)mEnd.style.display='none';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER TODAY
+// ════════════════════════════════════════════════════════
+function renderToday(){
+  const d=new Date(),weekdays=['日','一','二','三','四','五','六'];
+  const dateLabel=`${todayStr()}  周${weekdays[d.getDay()]}`;
+  [$id('pc-today-date-row'),$id('mob-today-date')].forEach(el=>{if(el)el.textContent=dateLabel});
+  const sessions=todaySessions(),mins=sessions.reduce((a,s)=>a+(parseInt(s.duration_minutes)||0),0);
+  const totalHTML=mins>0?`${Math.floor(mins/60)}<span class="stat-unit">h</span>${mins%60}<span class="stat-unit">m</span>`:'0<span class="stat-unit">m</span>';
+  if($id('pc-today-total'))$id('pc-today-total').innerHTML=totalHTML;
+  if($id('pc-today-count'))$id('pc-today-count').innerHTML=`${sessions.length}<span class="stat-unit">次</span>`;
+  if($id('pc-today-streak'))$id('pc-today-streak').innerHTML=`${calcStreak()}<span class="stat-unit">天</span>`;
+  if($id('mob-today-total'))$id('mob-today-total').innerHTML=mins>0?`${Math.floor(mins/60)}<span class="mob-stat-unit">h</span>${mins%60}<span class="mob-stat-unit">m</span>`:`0<span class="mob-stat-unit">m</span>`;
+  if($id('mob-today-count'))$id('mob-today-count').innerHTML=`${sessions.length}<span class="mob-stat-unit">次</span>`;
+  if($id('mob-today-streak'))$id('mob-today-streak').innerHTML=`${calcStreak()}<span class="mob-stat-unit">天</span>`;
+  const allDone=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>{const ak=(b.date+(b.start_time||'00:00:00'));const bk=(a.date+(a.start_time||'00:00:00'));return ak>bk?-1:ak<bk?1:0}).slice(0,5);
+  // PC recent
+  const pcList=$id('pc-recent-list');
+  if(pcList){if(!allDone.length){pcList.innerHTML='<div class="empty">暂无记录</div>';}else{pcList.innerHTML=allDone.map(s=>`<div class="record-item"><span class="record-time">${formatRecordPrimary(s)}</span><span class="record-duration">${formatRecordDuration(s)}</span>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<span class="record-note">${escapeHtml(s.article_title||'')}</span><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></div>`).join('');}}
+  // Mobile recent
+  const mobList=$id('mob-recent-list');
+  if(mobList){if(!allDone.length){mobList.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mobList.innerHTML=allDone.map(s=>`<div class="mob-record-card"><div class="mob-rec-info"><div class="mob-rec-dur">${formatRecordDuration(s)}</div><div class="mob-rec-meta">${formatRecordPrimary(s)}${isRangeRecord(s)?'':' · '+s.date}</div>${s.article_title?`<div class="mob-rec-title">${escapeHtml(s.article_title)}</div>`:''}</div>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}<div style="display:flex;gap:6px;flex-shrink:0;"><button class="mob-rec-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-rec-del" onclick="deleteRecord('${s.id}')">✕</button></div></div>`).join('');}}
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER LOG
+// ════════════════════════════════════════════════════════
+function renderLog(){
+  const allSessions=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date)})).sort((a,b)=>(b.date+(b.start_time||'00:00:00')).localeCompare(a.date+(a.start_time||'00:00:00')));
+  updateMobileDateFilterChip();
+  // PC table — uses PC filters
+  const pcFDate=($id('pc-filter-date')||{}).value||'';
+  const pcFNote=($id('pc-filter-note')||{}).value||'';
+  let pcSessions=allSessions;
+  if(pcFDate)pcSessions=pcSessions.filter(s=>s.date===pcFDate);
+  if(pcFNote)pcSessions=pcSessions.filter(s=>s.content_note===pcFNote);
+  const tbody=$id('pc-log-tbody');
+  if(tbody){const pcPage=paginate('pcLog',pcSessions);if(!pcSessions.length){tbody.innerHTML='<tr><td colspan="7" class="empty">暂无记录</td></tr>';}else{tbody.innerHTML=pcPage.items.map(s=>`<tr><td class="td-muted td-mono">${escapeHtml(s.date)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?'—':s.start_time)}</td><td class="td-mono">${escapeHtml(isRangeRecord(s)?(s.end_date||s.date):displayEndTime(s))}</td><td class="td-mono" style="font-weight:600;">${escapeHtml(formatRecordDuration(s))}</td><td>${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:'<span class="td-muted">—</span>'}</td><td class="td-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'—')}</td><td><div class="row-actions"><button class="btn-edit" onclick="openAddModal('${s.id}')">编辑</button><button class="btn-del" onclick="deleteRecord('${s.id}')">✕</button></div></td></tr>`).join('');}renderPager('pcLog',pcSessions.length,'pc-log-pager');}
+  // Mobile list — uses mobile filters independently
+  const mobFDate=($id('mob-filter-date')||{}).value||'';
+  const mobFNote=($id('mob-filter-note')||{}).value||'';
+  let mobSessions=allSessions;
+  if(mobFDate)mobSessions=mobSessions.filter(s=>s.date===mobFDate);
+  if(mobFNote)mobSessions=mobSessions.filter(s=>s.content_note===mobFNote);
+  const mlist=$id('mob-log-list');
+  if(mlist){const mobPage=paginate('mobLog',mobSessions);if(!mobSessions.length){mlist.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">📋</div>暂无记录</div>';}else{mlist.innerHTML=mobPage.items.map(s=>`<div class="mob-log-item"><div class="mob-log-date"><div class="mob-log-day">${s.date.slice(8)}</div><div class="mob-log-mon">${s.date.slice(5,7)}月</div></div><div class="mob-log-detail"><div class="mob-log-times">${isRangeRecord(s)?formatRecordRange(s):`${s.start_time.slice(0,5)} – ${displayEndTime(s)}`}${s.content_note?' · '+escapeHtml(s.content_note):''}</div><div class="mob-log-article">${escapeHtml(s.article_title||'—')}</div></div><div class="mob-log-right"><div class="mob-log-dur">${formatRecordDuration(s)}</div><div class="mob-log-btns"><button class="mob-log-btn" onclick="openAddModal('${s.id}')">编辑</button><button class="mob-log-btn" onclick="deleteRecord('${s.id}')" style="color:var(--red);">✕</button></div></div></div>`).join('');}renderPager('mobLog',mobSessions.length,'mob-log-pager');}
+}
+
+function deleteRecord(id){
+  if(!confirm('确认删除这条记录？'))return;
+  saveSessions(getSessions().filter(s=>s.id!==id));
+  renderAll();showToast('已删除');
+}
+
+// ════════════════════════════════════════════════════════
+// MODAL / SHEET
+// ════════════════════════════════════════════════════════
+function setModalContentNote(v,root=getActiveModalRoot()){
+  const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root),opts=getContentTypeOptions();
+  if(!sel||!inp)return;
+  if(opts.includes(v)){sel.value=v;inp.value='';inp.style.display='none'}
+  else if(v){sel.value='__custom__';inp.value=v;inp.style.display=''}
+  else{sel.value='';inp.value='';inp.style.display='none'}
+  updateModalMode(root,getModalContentNote(root));
+}
+function getModalContentNote(root=getActiveModalRoot()){
+  const sel=modalField('m-note-sel',root),inp=modalField('m-note-input',root);
+  if(!sel||!inp)return'';
+  return normalizeCategoryValue(sel.value==='__custom__'?inp.value.trim():sel.value);
+}
+function updateModalMode(root=getActiveModalRoot(),note=getModalContentNote(root)){
+  const isRange=isRangeCategory(note);
+  const endDateWrap=modalField('m-end-date-wrap',root),dateLabel=modalField('m-date-label',root);
+  const rangeTimeRow=modalField('m-range-time-row',root);
+  const startField=modalField('m-start',root),endField=modalField('m-end',root);
+  const timeRow=startField?.closest('.modal-row, .mob-sheet-row');
+  if(endDateWrap)endDateWrap.style.display=isRange?'':'none';
+  if(rangeTimeRow)rangeTimeRow.style.display=isRange?'':'none';
+  if(dateLabel)dateLabel.textContent=isRange?'开始日期 *':'日期 *';
+  if(timeRow)timeRow.style.display=isRange?'none':'';
+}
+
+function openAddModal(recordId=null){
+  const root=getActiveModalRoot();
+  editingRecordId=recordId;
+  const record=recordId?getSessions().find(s=>s.id===recordId):null;
+  const titleText=record?'编辑记录':'手动补录';
+  const saveText=record?'保存修改':'保存';
+  [$id('pc-modal-title'),$id('mob-modal-title')].forEach(el=>{if(el)el.textContent=titleText});
+  [$id('modal-save-btn'),$id('mob-modal-save-btn')].forEach(el=>{if(el)el.textContent=saveText});
+  const dateField=modalField('m-date',root),endDateField=modalField('m-end-date',root),rangeStartTimeField=modalField('m-range-start-time',root),rangeEndTimeField=modalField('m-range-end-time',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
+  if(dateField)dateField.value=record?.date||todayStr();
+  if(endDateField)endDateField.value=record?.end_date||record?.date||todayStr();
+  if(rangeStartTimeField)rangeStartTimeField.value=toInputTime(record?.range_start_time||'');
+  if(rangeEndTimeField)rangeEndTimeField.value=toInputTime(record?.range_end_time||'');
+  if(startField)startField.value=toInputTime(record?.start_time||'');
+  if(endField)endField.value=toInputTime(record?.end_time||'');
+  setModalContentNote(record?.content_note||'',root);
+  if(articleField)articleField.value=record?.article_title||'';
+  updateModalMode(root,record?.content_note||'');
+  setVoiceStatus('');resetVoiceBtn();updateDurationPreview(root);
+  if(isMobile())$id('mob-add-modal').classList.add('open');
+  else $id('pc-add-modal').classList.add('open');
+}
+function openVoiceAddModal(){openAddModal();startVoiceFill()}
+function closeAddModal(){
+  stopVoiceFill();
+  $id('pc-add-modal').classList.remove('open');
+  $id('mob-add-modal').classList.remove('open');
+  editingRecordId=null;
+}
+
+function saveManualRecord(){
+  const root=getActiveModalRoot();
+  const dateField=modalField('m-date',root),endDateField=modalField('m-end-date',root),rangeStartTimeField=modalField('m-range-start-time',root),rangeEndTimeField=modalField('m-range-end-time',root),startField=modalField('m-start',root),endField=modalField('m-end',root),articleField=modalField('m-article',root);
+  const date=normalizeDateValue(dateField?.value||''),start=startField?.value||'',end=endField?.value||'';
+  const note=getModalContentNote(root),article=(articleField?.value||'').trim();
+  const sessions=getSessions(),isEditing=!!editingRecordId;
+  if(isRangeCategory(note)){
+    const endDate=normalizeDateValue(endDateField?.value||date);
+    const rangeStartTime=toFullTime(rangeStartTimeField?.value||'');
+    const rangeEndTime=toFullTime(rangeEndTimeField?.value||'');
+    if(!date||!endDate){showToast('开始日期和结束日期为必填','error');return}
+    if(endDate<date){showToast('结束日期不能早于开始日期','error');return}
+    rememberContentType(note);rememberArticleTitle(article);saveLastInput(note,article);
+    const payload={date,end_date:endDate,start_time:'',end_time:'',duration_minutes:0,content_note:note,article_title:article,status:'completed',cross_day:false,record_type:'range',range_start_time:rangeStartTime,range_end_time:rangeEndTime};
+    if(isEditing){const idx=sessions.findIndex(s=>s.id===editingRecordId);if(idx===-1){showToast('未找到记录','error');return};sessions[idx]={...sessions[idx],...payload}}
+    else sessions.push({id:uid(),...payload});
+  }else{
+    if(!date||!start||!end){showToast('日期、开始和结束时间为必填','error');return}
+    const sf=toFullTime(start),ef=toFullTime(end),range=resolveRange(date,sf,ef),dur=diffMinutesFloor(range.start,range.end);
+    if(dur<=0){showToast('时长不能为0，请检查时间填写','error');return}
+    rememberContentType(note);rememberArticleTitle(article);saveLastInput(note,article);
+    const payload={date,start_time:sf,end_time:ef,duration_minutes:dur,content_note:note,article_title:article,status:'completed',cross_day:range.crossDay,record_type:'timer',end_date:'',range_start_time:'',range_end_time:''};    if(isEditing){const idx=sessions.findIndex(s=>s.id===editingRecordId);if(idx===-1){showToast('未找到记录','error');return};sessions[idx]={...sessions[idx],...payload}}
+    else sessions.push({id:uid(),...payload});
+  }
+  saveSessions(sessions);closeAddModal();refreshContentTypeUI();refreshArticleTitleUI();renderAll();
+  showToast(isEditing?'修改已保存':'补录成功','success');
+}
+
+function updateDurationPreview(root=getActiveModalRoot()){
+  const date=modalField('m-date',root)?.value||'',endDate=modalField('m-end-date',root)?.value||'',rangeStartTime=modalField('m-range-start-time',root)?.value||'',rangeEndTime=modalField('m-range-end-time',root)?.value||'',start=modalField('m-start',root)?.value||'',end=modalField('m-end',root)?.value||'',el=modalField('m-duration-preview',root);
+  if(!el)return;
+  const note=getModalContentNote(root);
+  if(isRangeCategory(note)){
+    if(!date||!endDate){el.textContent='';return}
+    const timeHint=(rangeStartTime||rangeEndTime)?` · ${rangeStartTime||'--:--'} ~ ${rangeEndTime||'--:--'}`:'';
+    el.textContent=endDate<date?'⚠ 结束日期早于开始日期':`预计区间：${diffDaysInclusive(date,endDate)} 天${timeHint}`;
+    return;
+  }
+  if(!date||!start||!end){el.textContent='';return}
+  const range=resolveRange(date,start+':00',end+':00');
+  const d=diffMinutesFloor(range.start,range.end);
+  el.textContent=`预计时长：${d} 分钟${range.crossDay?'（自动按次日结束计算）':''}`;
+}
+
+// ════════════════════════════════════════════════════════
+// VOICE
+// ════════════════════════════════════════════════════════
+function setVoiceStatus(text,active=false){
+  [$id('pc-voice-status'),$id('mob-voice-status')].forEach(el=>{if(!el)return;el.textContent=text||'';el.classList.toggle('show',!!(text||active))});
+}
+function resetVoiceBtn(){
+  const pcBtn=$id('pc-voice-btn'),pcTxt=$id('pc-voice-btn-text');
+  const mBtn=$id('mob-voice-btn'),mIcon=$id('mob-voice-btn-icon'),mTxt=$id('mob-voice-btn-text');
+  if(pcBtn)pcBtn.classList.remove('recording');
+  if(pcTxt)pcTxt.textContent='点击语音录入';
+  if(mBtn)mBtn.classList.remove('recording');
+  if(mIcon)mIcon.textContent='🎤';
+  if(mTxt)mTxt.textContent='点击开始语音录入';
+}
+function stopVoiceFill(cs=true){if(recognition&&recognitionActive)recognition.stop();recognitionActive=false;resetVoiceBtn();if(cs)setVoiceStatus('')}
+function startVoiceFill(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('当前浏览器不支持语音识别，请用 Chrome 或 Safari（需在浏览器中打开，不支持微信内置浏览器）','error');return}
+  if(recognitionActive){stopVoiceFill();return}
+  if(!recognition){
+    recognition=new SR();recognition.lang='zh-CN';recognition.interimResults=false;recognition.maxAlternatives=1;
+    recognition.onresult=e=>{const text=Array.from(e.results).map(r=>r[0].transcript).join('').trim();if(!text)return;applySpeechToModal(text)};
+    recognition.onerror=e=>{recognitionActive=false;resetVoiceBtn();const msg=e.error==='not-allowed'?'麦克风权限被拒绝，请允许后重试':'语音识别失败，请重试';setVoiceStatus(msg);showToast(msg,'error')};
+    recognition.onend=()=>{recognitionActive=false;resetVoiceBtn()};
+  }
+  const pcBtn=$id('pc-voice-btn'),pcTxt=$id('pc-voice-btn-text'),mBtn=$id('mob-voice-btn'),mIcon=$id('mob-voice-btn-icon'),mTxt=$id('mob-voice-btn-text');
+  if(pcBtn)pcBtn.classList.add('recording');if(pcTxt)pcTxt.textContent='正在听… 点击停止';
+  if(mBtn)mBtn.classList.add('recording');if(mIcon)mIcon.textContent='⏹';if(mTxt)mTxt.textContent='正在听… 点击停止';
+  setVoiceStatus('正在监听，请说一整句话…',true);
+  recognitionActive=true;recognition.start();
+}
+function applySpeechToModal(text){
+  const root=getActiveModalRoot();
+  const parsed=parseSpeechInput(text);
+  if(parsed.date&&modalField('m-date',root))modalField('m-date',root).value=parsed.date;
+  if(parsed.start&&modalField('m-start',root))modalField('m-start',root).value=parsed.start;
+  if(parsed.end&&modalField('m-end',root))modalField('m-end',root).value=parsed.end;
+  if(parsed.note)setModalContentNote(parsed.note,root);
+  if(parsed.article&&modalField('m-article',root))modalField('m-article',root).value=parsed.article;
+  updateDurationPreview(root);setVoiceStatus(`已识别：${text}`);showToast('语音已填入','success');
+}
+function parseSpeechInput(text){
+  const raw=String(text||'').replace(/[，。；、]/g,' ').replace(/\s+/g,' ').trim();
+  const result={date:'',start:'',end:'',note:'',article:''};
+  const today=new Date(),tomorrow=new Date(),yesterday=new Date();
+  tomorrow.setDate(today.getDate()+1);yesterday.setDate(today.getDate()-1);
+  if(raw.includes('明天'))result.date=localDateStr(tomorrow);
+  else if(raw.includes('昨天'))result.date=localDateStr(yesterday);
+  else if(raw.includes('今天'))result.date=localDateStr(today);
+  for(const opt of getContentTypeOptions()){if(raw.includes(opt)){result.note=opt;break}}
+  const tm=[];const tr=/((?:上午|中午|下午|晚上)?)(\d{1,2})\s*(?:点|:|：)\s*(\d{1,2})?\s*(?:分|半)?/g;let m;
+  while((m=tr.exec(raw))!==null){const p=m[1]||'';let h=parseInt(m[2],10);let mi=0;if(m[0].includes('半'))mi=30;else if(m[3]!=null&&m[3]!=='')mi=parseInt(m[3],10);if((p==='下午'||p==='晚上')&&h<12)h+=12;if(p==='中午'&&h<11)h+=12;if(h>=0&&h<24&&mi>=0&&mi<60)tm.push(`${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`)}
+  if(tm[0])result.start=tm[0];if(tm[1])result.end=tm[1];
+  let article=raw;article=article.replace(/今天|明天|昨天/g,' ');article=article.replace(/(?:上午|中午|下午|晚上)?\d{1,2}\s*(?:点|:|：)\s*(?:\d{1,2})?\s*(?:分|半)?/g,' ');article=article.replace(/到|开始|结束|从|学习|训练|活动|事项|补录|记录|语音|计时/g,' ');for(const opt of getContentTypeOptions())article=article.replaceAll(opt,' ');article=article.replace(/\s+/g,' ').trim();result.article=article;
+  return result;
+}
+
+// ════════════════════════════════════════════════════════
+// CONTENT TYPE MANAGER  (drag-to-reorder)
+// ════════════════════════════════════════════════════════
+function openContentTypeManager(){
+  renderContentTypeManager();
+  if(isMobile())$id('mob-content-type-modal').classList.add('open');
+  else $id('pc-content-type-modal').classList.add('open');
+}
+function closeContentTypeManager(){
+  $id('pc-content-type-modal').classList.remove('open');
+  $id('mob-content-type-modal').classList.remove('open');
+}
+function renderContentTypeManager(values=getContentTypeOptions()){
+  const pcList=$id('pc-content-type-list');
+  const mList=$id('mob-content-type-list');
+  if(pcList){
+    pcList.innerHTML=values.map((v,i)=>`
+      <div class="manager-row" draggable="true" data-idx="${i}">
+        <span class="manager-drag-handle" title="拖拽排序">⠿</span>
+        <input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称">
+        <button class="manager-del-btn" onclick="deleteContentTypeRowFromEl(this)" title="删除">×</button>
+      </div>`).join('');
+    initDragSort(pcList,'manager-row','pc');
+  }
+  if(mList){
+    mList.innerHTML=values.map((v,i)=>`
+      <div class="mob-mgr-row" data-idx="${i}">
+        <span class="mob-mgr-handle">⠿</span>
+        <input class="field-input" value="${escapeHtml(v)}" placeholder="分类名称" style="background:var(--surface2);">
+        <button class="mob-mgr-del" onclick="deleteContentTypeRowFromEl(this)" title="删除">×</button>
+      </div>`).join('');
+    initTouchDragSort(mList,'mob-mgr-row');
+  }
+}
+function getContentTypeManagerValues(){
+  // Read from whichever modal is currently open
+  const pcOpen=$id('pc-content-type-modal')?.classList.contains('open');
+  const listId=pcOpen?'pc-content-type-list':'mob-content-type-list';
+  const list=$id(listId);
+  if(!list)return[];
+  return Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean);
+}
+function deleteContentTypeRowFromEl(btn){
+  btn.closest('.manager-row,.mob-mgr-row').remove();
+}
+function addContentTypeRow(){
+  const pcOpen=$id('pc-content-type-modal')?.classList.contains('open');
+  const listId=pcOpen?'pc-content-type-list':'mob-content-type-list';
+  const list=$id(listId);
+  if(!list)return;
+  const values=Array.from(list.querySelectorAll('input')).map(i=>i.value.trim()).filter(Boolean);
+  values.push('');
+  renderContentTypeManager(values);
+  const newList=$id(listId);
+  if(newList){const inputs=newList.querySelectorAll('input');if(inputs.length)inputs[inputs.length-1].focus();}
+}
+function saveContentTypeManager(){saveContentTypeOptions(getContentTypeManagerValues());refreshContentTypeUI();closeContentTypeManager();showToast('分类已更新','success')}
+
+// ── PC: HTML5 drag-and-drop sort ──
+function initDragSort(list,rowClass,ns){
+  let dragEl=null;
+  list.querySelectorAll('.'+rowClass).forEach(row=>{
+    row.addEventListener('dragstart',e=>{dragEl=row;row.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    row.addEventListener('dragend',()=>{dragEl=null;list.querySelectorAll('.'+rowClass).forEach(r=>r.classList.remove('dragging','drag-over'));});
+    row.addEventListener('dragover',e=>{e.preventDefault();if(dragEl&&dragEl!==row){row.classList.add('drag-over');}});
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',e=>{e.preventDefault();row.classList.remove('drag-over');if(dragEl&&dragEl!==row){const rows=[...list.querySelectorAll('.'+rowClass)];const fromIdx=rows.indexOf(dragEl),toIdx=rows.indexOf(row);if(fromIdx<toIdx)list.insertBefore(dragEl,row.nextSibling);else list.insertBefore(dragEl,row);}});
+  });
+}
+
+// ── Mobile: touch drag sort ──
+function initTouchDragSort(list,rowClass){
+  let dragging=null,placeholder=null;
+  function getRows(){return[...list.querySelectorAll('.'+rowClass)];}
+  function bindHandles(){
+    list.querySelectorAll('.mob-mgr-handle').forEach(handle=>{
+      // Remove old listeners by cloning
+      const newHandle=handle.cloneNode(true);
+      handle.parentNode.replaceChild(newHandle,handle);
+      newHandle.addEventListener('touchstart',e=>{
+        const row=newHandle.closest('.'+rowClass);
+        dragging=row;
+        placeholder=document.createElement('div');
+        placeholder.style.cssText=`height:${row.offsetHeight}px;background:var(--accent-soft);border:2px dashed var(--accent-mid);border-radius:10px;margin:0;`;
+        row.classList.add('dragging');
+        list.insertBefore(placeholder,row.nextSibling);
+        e.preventDefault();
+      },{passive:false});
+      newHandle.addEventListener('touchmove',e=>{
+        if(!dragging)return;
+        e.preventDefault();
+        const y=e.touches[0].clientY;
+        const rows=getRows().filter(r=>r!==dragging&&r!==placeholder);
+        let inserted=false;
+        for(const r of rows){
+          const rect=r.getBoundingClientRect();
+          if(y<rect.top+rect.height/2){list.insertBefore(placeholder,r);inserted=true;break;}
+        }
+        if(!inserted)list.insertBefore(placeholder,null);
+      },{passive:false});
+      newHandle.addEventListener('touchend',()=>{
+        if(!dragging)return;
+        if(placeholder&&placeholder.parentNode)list.insertBefore(dragging,placeholder);
+        if(placeholder)placeholder.remove();
+        dragging.classList.remove('dragging');
+        dragging=null;placeholder=null;
+        // Re-bind so subsequent drags work
+        bindHandles();
+      });
+      // Handle interruption (incoming call, system gesture, etc.)
+      newHandle.addEventListener('touchcancel',()=>{
+        if(dragging)dragging.classList.remove('dragging');
+        if(placeholder&&placeholder.parentNode)placeholder.remove();
+        dragging=null;placeholder=null;
+      });
+    });
+  }
+  bindHandles();
+}
+
+// ════════════════════════════════════════════════════════
+// CSV
+// ════════════════════════════════════════════════════════
+function exportCSV(){
+  const sessions=getSessions().filter(s=>s.status==='completed').sort((a,b)=>(a.date+(a.start_time||'00:00:00')).localeCompare(b.date+(b.start_time||'00:00:00')));
+  const header=['date','end_date','range_start_time','range_end_time','start_time','end_time','duration_minutes','content_note','article_title','cross_day','record_type'];
+  const rows=sessions.map(s=>[s.date,s.end_date||'',s.range_start_time||'',s.range_end_time||'',s.start_time,s.end_time,s.duration_minutes,s.content_note,s.article_title,s.cross_day?'1':'0',s.record_type||'timer'].map(v=>v==null?'':String(v)));
+  const csv=[header,...rows].map(r=>r.map(c=>(c.includes(',')||c.includes('"')||c.includes('\n'))?`"${c.replace(/"/g,'""')}"`:c).join(',')).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`活动记录_${todayStr()}.csv`;a.click();
+  showToast(`已导出 ${sessions.length} 条记录`,'success');
+}
+const COL_MAP={date:['date','日期','Date'],end_date:['end_date','结束日期'],range_start_time:['range_start_time','period_start_time','开始时刻'],range_end_time:['range_end_time','period_end_time','结束时刻'],start_time:['start_time','starttime','start','开始时间','开始'],end_time:['end_time','endtime','end','结束时间','结束'],duration_minutes:['duration_minutes','duration','minutes','时长','duration_min'],content_note:['content_note','note','content','内容','备注','contentNote'],article_title:['article_title','title','article','文章','事项','项目','articleTitle'],cross_day:['cross_day','crossday','overnight','next_day','次日结束'],record_type:['record_type','type','记录类型']};
+function normalizeHeader(h){return h.toLowerCase().replace(/[\s_-]/g,'')}
+function mapHeaders(headers){const r={};headers.forEach((raw,idx)=>{const n=normalizeHeader(raw);for(const[field,aliases]of Object.entries(COL_MAP)){if(aliases.some(a=>normalizeHeader(a)===n)){r[field]=idx;break}}});return r}
+function parseCSVLine(line){const result=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++}else inQ=!inQ}else if(c===','&&!inQ){result.push(cur);cur=''}else cur+=c}result.push(cur);return result}
+function importCSV(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let text=e.target.result;if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2){showToast('CSV文件内容为空','error');return}
+    const headers=parseCSVLine(lines[0]).map(h=>h.trim()),colMap=mapHeaders(headers);
+    if(colMap.date===undefined){showToast('未找到date列','error');return}
+    const existing=getSessions();
+    // Dedup key: for range records use date+end_date+content_note, for timer use date+start_time
+    const existingIds=new Set(existing.map(s=>isRangeRecord(s)?`range|${s.date}|${s.end_date||s.date}|${s.content_note}`:s.date+'|'+s.start_time));
+    let imported=0,skipped=0;
+    for(let i=1;i<lines.length;i++){
+      const cells=parseCSVLine(lines[i]).map(c=>c.trim()),get=(f)=>colMap[f]!==undefined?(cells[colMap[f]]||''):'';
+      const date=normalizeDateValue(get('date')),start_time=get('start_time');
+      const recordType=get('record_type')||'';
+      const contentNote=normalizeCategoryValue(get('content_note'));
+      if(!date){skipped++;continue}
+      const isRange=recordType==='range'||isRangeCategory(contentNote);
+      // Compute dedup key before any push
+      const endDateRaw=normalizeDateValue(get('end_date')||date);
+      const key=isRange?`range|${date}|${endDateRaw}|${contentNote}`:date+'|'+start_time;
+      if(existingIds.has(key)){skipped++;continue}
+      if(!isRange&&!start_time){skipped++;continue}
+      const end_time=get('end_time');
+      const normalizedStart=start_time.length===5?start_time+':00':start_time;
+      const normalizedEnd=end_time.length===5?end_time+':00':end_time;
+      const importedCrossDay=['1','true','yes','y'].includes(String(get('cross_day')||'').toLowerCase());
+      let dm=parseInt(get('duration_minutes'));let crossDay=importedCrossDay;
+      if(isRange){existing.push({id:uid(),date,end_date:endDateRaw,range_start_time:toFullTime(get('range_start_time')||''),range_end_time:toFullTime(get('range_end_time')||''),start_time:'',end_time:'',duration_minutes:0,content_note:contentNote,article_title:get('article_title'),status:'completed',cross_day:false,record_type:'range'})}
+      else{
+        if(isNaN(dm)||dm<0){if(normalizedStart&&normalizedEnd){const range=resolveRange(date,normalizedStart,normalizedEnd,importedCrossDay);dm=diffMinutesFloor(range.start,range.end);crossDay=range.crossDay}else dm=0}
+        else if(normalizedStart&&normalizedEnd){crossDay=resolveRange(date,normalizedStart,normalizedEnd,importedCrossDay).crossDay}
+        existing.push({id:uid(),date,end_date:'',start_time:normalizedStart,end_time:normalizedEnd,duration_minutes:dm,content_note:contentNote,article_title:get('article_title'),status:'completed',cross_day:crossDay,record_type:'timer'});
+      }
+      existingIds.add(key);imported++;
+    }
+    saveSessions(existing);hydratePreferencesFromSessions();refreshContentTypeUI();refreshArticleTitleUI();renderAll();
+    showToast(`导入 ${imported} 条，跳过 ${skipped} 条`,'success');
+  };
+  reader.readAsText(file,'utf-8');event.target.value='';
+}
+
+// ════════════════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════════════════
+function initStatsYear(){
+  const sessions=getSessions();
+  if(sessions.length){const years=[...new Set(sessions.map(s=>normalizeDateValue(s.date).slice(0,4)).filter(Boolean))].sort();statsYear=parseInt(years[years.length-1])||new Date().getFullYear()}
+  else statsYear=new Date().getFullYear();
+}
+function changeYear(d){statsYear+=d;resetPages(['pcCategory','mobCategory','pcArticle','mobArticle','pcHeatmapDay']);[$id('pc-stats-year-display'),$id('mob-stats-year-display')].forEach(el=>{if(el)el.textContent=statsYear});renderStats()}
+
+function renderStats(){
+  const yr=statsYear;
+  [$id('pc-stats-year-display'),$id('mob-stats-year-display')].forEach(el=>{if(el)el.textContent=yr});
+  let sessions=getSessions().filter(s=>s.status==='completed').map(s=>({...s,date:normalizeDateValue(s.date),content_note:normalizeCategoryValue(s.content_note)}));
+  const yearSessions=sessions.filter(s=>s.date.startsWith(String(yr)));
+  const periodSessions=yearSessions.filter(s=>isRangeRecord(s)||isRangeCategory(s.content_note));
+  const timedYearSessions=yearSessions.filter(s=>!isRangeRecord(s)&&!isRangeCategory(s.content_note));
+  const isAllFilter=statsCategoryFilter===STATS_FILTER_ALL;
+  const isNoPeriodFilter=statsCategoryFilter===STATS_FILTER_NO_PERIOD;
+  const isPeriodFilter=isRangeCategory(statsCategoryFilter);
+  const isCategoryFilter=!isAllFilter&&!isNoPeriodFilter&&!isPeriodFilter;
+  // For Period filter: use periodSessions; for normal category: filter timedYearSessions; otherwise all timed
+  let filteredSessions=isPeriodFilter?periodSessions:isCategoryFilter?timedYearSessions.filter(s=>s.content_note===statsCategoryFilter):timedYearSessions;
+  const dayMap={};filteredSessions.forEach(s=>expandSessionToDayMinutes(s).forEach(entry=>addMinutesToDayMap(dayMap,entry.date,entry.minutes)));
+  const chartDayMap={...dayMap};
+  if(isAllFilter)periodSessions.forEach(s=>expandSessionToDayMinutes(s).forEach(entry=>addMinutesToDayMap(chartDayMap,entry.date,entry.minutes)));
+  const totalMins=Object.values(dayMap).reduce((a,v)=>a+v.minutes,0);
+  const learnDays=Object.keys(dayMap).filter(d=>(dayMap[d]||{}).minutes>0).length;
+  const avgMins=learnDays?Math.floor(totalMins/learnDays):0;
+  // Streak: always use all non-range sessions for continuity (period doesn't count as daily study)
+  const streak=calcStreakFromSessions(timedYearSessions);
+  const sfx=(isCategoryFilter||isPeriodFilter)?` · ${statsCategoryFilter}`:'';
+  const chartSfx=sfx;
+  // PC stats cards
+  if($id('pc-stats-cards'))$id('pc-stats-cards').innerHTML=`<div class="stat-card"><div class="stat-card-label">全年总时长${sfx}</div><div class="stat-card-value">${Math.floor(totalMins/60)}<span class="stat-card-unit">h ${totalMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">活跃天数</div><div class="stat-card-value">${learnDays}<span class="stat-card-unit">天</span></div></div><div class="stat-card"><div class="stat-card-label">日均时长</div><div class="stat-card-value">${Math.floor(avgMins/60)}<span class="stat-card-unit">h ${avgMins%60}m</span></div></div><div class="stat-card"><div class="stat-card-label">当前连续</div><div class="stat-card-value">${streak}<span class="stat-card-unit">天</span></div></div>`;
+  // Mobile stats cards
+  if($id('mob-stats-cards'))$id('mob-stats-cards').innerHTML=`<div class="mob-sc-card"><div class="mob-sc-lbl">全年总时长${sfx}</div><div class="mob-sc-val">${Math.floor(totalMins/60)}<span class="mob-sc-unit">h ${totalMins%60}m</span></div></div><div class="mob-sc-card"><div class="mob-sc-lbl">活跃天数</div><div class="mob-sc-val">${learnDays}<span class="mob-sc-unit">天</span></div></div><div class="mob-sc-card"><div class="mob-sc-lbl">日均时长</div><div class="mob-sc-val">${Math.floor(avgMins/60)}<span class="mob-sc-unit">h ${avgMins%60}m</span></div></div><div class="mob-sc-card"><div class="mob-sc-lbl">当前连续</div><div class="mob-sc-val">${streak}<span class="mob-sc-unit">天</span></div></div>`;
+  // Category summary (PC)
+  const catMap={};timedYearSessions.forEach(s=>{const n=s.content_note||'未分类';if(!catMap[n])catMap[n]={minutes:0,count:0};catMap[n].minutes+=expandSessionToDayMinutes(s).reduce((a,entry)=>a+entry.minutes,0);catMap[n].count++});
+  const catEntries=Object.entries(catMap).sort((a,b)=>b[1].minutes-a[1].minutes);
+  const maxCatMins=catEntries.length?catEntries[0][1].minutes:1;
+  if($id('pc-stats-summary')){const pcCatPage=paginate('pcCategory',catEntries);if(!catEntries.length)$id('pc-stats-summary').innerHTML='';else $id('pc-stats-summary').innerHTML=pcCatPage.items.map(([name,info])=>`<div class="summary-item ${statsCategoryFilter===name?'active':''}" data-category="${escapeHtml(name)}" onclick="selectStatsCategoryFromEl(this)"><div class="summary-item-head"><div class="summary-item-name">${escapeHtml(name)}</div><div class="summary-item-time">${Math.floor(info.minutes/60)}h ${info.minutes%60}m</div></div><div class="summary-item-meta">${info.count} 次记录</div></div>`).join('');renderPager('pcCategory',catEntries.length,'pc-stats-summary-pager')}
+  // Category list (mobile)
+  if($id('mob-cat-list')){const mobCatPage=paginate('mobCategory',catEntries);if(!catEntries.length)$id('mob-cat-list').innerHTML='<div style="color:var(--muted);font-size:13px;padding:12px 0;">暂无数据</div>';else $id('mob-cat-list').innerHTML=mobCatPage.items.map(([name,info])=>`<div class="mob-cat-item ${statsCategoryFilter===name?'active':''}" data-category="${escapeHtml(name)}" onclick="selectStatsCategoryFromEl(this)"><div class="mob-cat-bar"><div class="mob-cat-name">${escapeHtml(name)}</div><div class="mob-cat-prog"><div class="mob-cat-prog-fill" style="width:${Math.round((info.minutes/maxCatMins)*100)}%"></div></div><div class="mob-cat-count">${info.count} 次</div></div><div class="mob-cat-time">${Math.floor(info.minutes/60)}h${info.minutes%60}m</div></div>`).join('');renderPager('mobCategory',catEntries.length,'mob-cat-pager')}
+  [$id('pc-period-summary'),$id('mob-period-summary')].forEach(el=>{if(el){el.style.display='none';el.innerHTML='';}});
+  [$id('pc-heatmap-title'),$id('mob-heatmap-title')].forEach(el=>{if(el)el.textContent=`${yr} 年计时热力图${chartSfx}`});
+  renderHeatmap(yr,chartDayMap);renderDailyBar(chartDayMap,chartSfx);renderMonthlyBar(yr,chartDayMap,chartSfx);renderWeekHourHeatmap();renderArticleDetail();
+}
+function selectStatsCategory(name){
+  statsCategoryFilter=statsCategoryFilter===name?STATS_FILTER_ALL:name;
+  resetPages(['pcCategory','mobCategory','pcArticle','mobArticle','pcHeatmapDay']);
+  [$id('pc-stats-category-filter'),$id('mob-stats-category-filter')].forEach(el=>{if(el)el.value=statsCategoryFilter});
+  renderStats();
+}
+function selectStatsCategoryFromEl(el){selectStatsCategory(el?.dataset?.category||'')}
+// ════════════════════════════════════════════════════════
+// WEEKLY GANTT CHART
+// ════════════════════════════════════════════════════════
+function getWeekMonday(offset){
+  const today=new Date();
+  const dow=today.getDay()===0?7:today.getDay();
+  const monday=new Date(today);
+  monday.setDate(today.getDate()-(dow-1)+(offset*7));
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+function changeWeek(delta){
+  weekOffset+=delta;
+  resetPages(['pcWeekSummary','mobWeekSummary']);
+  renderWeekHourHeatmap();
+}
+function renderWeekHourHeatmap(){
+  const ganttEl=$id('pc-week-gantt');
+  const axisEl=$id('pc-gantt-axis');
+  const labelEl=$id('pc-week-heatmap-label');
+  const mobGanttEl=$id('mob-week-gantt');
+  const mobAxisEl=$id('mob-gantt-axis');
+  const mobLabelEl=$id('mob-week-heatmap-label');
+
+  // Clear old PC legend
+  const oldLegend=$id('pc-gantt-legend');
+  if(oldLegend)oldLegend.remove();
+
+  const monday=getWeekMonday(weekOffset);
+  const days=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(monday);
+    d.setDate(monday.getDate()+i);
+    days.push(d);
+  }
+
+  // Week label
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
+  function getISOWeek(d){
+    const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    const day=dt.getUTCDay()||7;
+    dt.setUTCDate(dt.getUTCDate()+4-day);
+    const yearStart=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+    return Math.ceil((((dt-yearStart)/86400000)+1)/7);
+  }
+  const wn=getISOWeek(days[0]);
+  const weekLabelHtml=`<span style="color:var(--muted);font-size:11px;font-weight:400;margin-right:6px;">第${wn}周</span>&nbsp;&nbsp;${fmt(days[0])} – ${fmt(days[6])}`;
+  if(labelEl)labelEl.innerHTML=weekLabelHtml;
+  if(mobLabelEl)mobLabelEl.innerHTML=weekLabelHtml;
+
+  // Color palette
+  const CATEGORY_COLORS=['#3A6EA8','#2E7D52','#8B5CF6','#D97706','#DC2626','#0891B2','#BE185D','#65A30D'];
+  const colorMap={};
+  const cats=getContentTypeOptions().filter(c=>!isRangeCategory(c));
+  cats.forEach((c,i)=>{colorMap[c]=CATEGORY_COLORS[i%CATEGORY_COLORS.length]});
+  function getCatColor(note){return note&&colorMap[note]?colorMap[note]:'#94A3B8';}
+
+  // Collect sessions for this week
+  const allSessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
+  const todayStr2=localDateStr();
+  const dayStrs=days.map(d=>localDateStr(d));
+  const sessionsByDay={};
+  dayStrs.forEach(ds=>sessionsByDay[ds]=[]);
+
+  allSessions.forEach(s=>{
+    const start=s.start_time?toFullTime(s.start_time):'';
+    const end=s.end_time?toFullTime(s.end_time):'';
+    if(!s.date||!start||!end)return;
+    const range=resolveRange(s.date,start,end,!!s.cross_day);
+    dayStrs.forEach(ds=>{
+      const dayStart=new Date(ds+'T00:00:00');
+      const dayEnd=new Date(ds+'T00:00:00');
+      dayEnd.setDate(dayEnd.getDate()+1);
+      const overlapStart=Math.max(range.start.getTime(),dayStart.getTime());
+      const overlapEnd=Math.min(range.end.getTime(),dayEnd.getTime());
+      if(overlapEnd>overlapStart){
+        const startMin=(overlapStart-dayStart.getTime())/60000;
+        const endMin=(overlapEnd-dayStart.getTime())/60000;
+        const note=normalizeCategoryValue(s.content_note||'');
+        const label=`${note||'未分类'}${s.article_title?' · '+s.article_title:''} ${start.slice(0,5)}–${end.slice(0,5)} (${fmtMinutes(Math.round(endMin-startMin))})`;
+        sessionsByDay[ds].push({startMin,endMin,label,color:getCatColor(note)});
+      }
+    });
+  });
+
+  const dayNames=['一','二','三','四','五','六','日'];
+  const PC_HOURS=24, PC_TOTAL=PC_HOURS*60;
+  // Mobile: show 6h–24h range to save space
+  const MOB_START=6*60, MOB_END=24*60, MOB_SPAN=MOB_END-MOB_START;
+
+  // ── PC axis ──
+  if(axisEl){
+    const ticks=[];
+    for(let h=0;h<=PC_HOURS;h+=3){
+      ticks.push(`<div class="week-gantt-axis-tick" style="left:${(h/PC_HOURS*100).toFixed(1)}%">${h===0?'0':h}时</div>`);
+    }
+    axisEl.innerHTML=ticks.join('');
+  }
+
+  // ── Mobile axis (6–24h) ──
+  if(mobAxisEl){
+    const ticks=[];
+    for(let h=6;h<=24;h+=3){
+      const pct=((h*60-MOB_START)/MOB_SPAN*100).toFixed(1);
+      ticks.push(`<div class="mob-gantt-axis-tick" style="left:${pct}%">${h}时</div>`);
+    }
+    mobAxisEl.innerHTML=ticks.join('');
+  }
+
+  // ── PC rows ──
+  if(ganttEl){
+    const rows=days.map((d,di)=>{
+      const ds=localDateStr(d);
+      const isToday=ds===todayStr2;
+      const segs=sessionsByDay[ds]||[];
+      const gridLines=[];
+      for(let h=3;h<PC_HOURS;h+=3){
+        gridLines.push(`<div class="week-gantt-grid-line" style="left:${(h/PC_HOURS*100).toFixed(1)}%"></div>`);
+      }
+      const blocks=segs.map(seg=>{
+        const left=(seg.startMin/PC_TOTAL*100).toFixed(3);
+        const width=Math.max(((seg.endMin-seg.startMin)/PC_TOTAL*100),0.3).toFixed(3);
+        return`<div class="week-gantt-block" style="left:${left}%;width:${width}%;background:${seg.color}" data-tip="${escapeHtml(seg.label)}" onmouseenter="showGanttTip(event,this)" onmouseleave="hideGanttTip()"></div>`;
+      }).join('');
+      return`<div class="week-gantt-row">
+        <div class="week-gantt-day-label${isToday?' today':''}">周${dayNames[di]}<br><span style="font-size:9px;opacity:0.7">${fmt(d)}</span></div>
+        <div class="week-gantt-track">${gridLines.join('')}${blocks}</div>
+      </div>`;
+    }).join('');
+    ganttEl.innerHTML=rows;
+
+    // PC legend
+    const usedNotes=new Set(Object.values(sessionsByDay).flat().map(seg=>cats.find(c=>getCatColor(c)===seg.color)||'').filter(Boolean));
+    const legendCats=cats.filter(c=>usedNotes.has(c));
+    if(legendCats.length){
+      const legendHtml=`<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">`
+        +legendCats.map(c=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-2);"><div style="width:12px;height:12px;border-radius:2px;background:${getCatColor(c)};flex-shrink:0;"></div>${escapeHtml(c)}</div>`).join('')
+        +`</div>`;
+      ganttEl.insertAdjacentHTML('afterend',`<div id="pc-gantt-legend">${legendHtml}</div>`);
+    }
+  }
+
+  // ── Mobile rows (6h–24h window) ──
+  if(mobGanttEl){
+    const rows=days.map((d,di)=>{
+      const ds=localDateStr(d);
+      const isToday=ds===todayStr2;
+      const segs=sessionsByDay[ds]||[];
+      const gridLines=[];
+      for(let h=6;h<=24;h+=3){
+        const pct=((h*60-MOB_START)/MOB_SPAN*100).toFixed(1);
+        gridLines.push(`<div class="mob-gantt-grid" style="left:${pct}%"></div>`);
+      }
+      const blocks=segs.map(seg=>{
+        const clippedStart=Math.max(seg.startMin,MOB_START);
+        const clippedEnd=Math.min(seg.endMin,MOB_END);
+        if(clippedEnd<=clippedStart)return'';
+        const left=((clippedStart-MOB_START)/MOB_SPAN*100).toFixed(3);
+        const width=Math.max(((clippedEnd-clippedStart)/MOB_SPAN*100),0.5).toFixed(3);
+        return`<div class="mob-gantt-block" style="left:${left}%;width:${width}%;background:${seg.color}" title="${escapeHtml(seg.label)}"></div>`;
+      }).join('');
+      return`<div class="mob-gantt-row">
+        <div class="mob-gantt-day-lbl${isToday?' today':''}">周${dayNames[di]}</div>
+        <div class="mob-gantt-track">${gridLines.join('')}${blocks}</div>
+      </div>`;
+    }).join('');
+    mobGanttEl.innerHTML=rows;
+  }
+
+  renderWeekSummary(dayStrs);
+}
+
+function renderWeekSummary(dayStrs){
+  const sessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
+  const catMap={};
+  let totalMins=0;
+
+  sessions.forEach(s=>{
+    const start=s.start_time?toFullTime(s.start_time):'';
+    const end=s.end_time?toFullTime(s.end_time):'';
+    if(!s.date||!start||!end)return;
+    const range=resolveRange(s.date,start,end,!!s.cross_day);
+    const note=normalizeCategoryValue(s.content_note||'')||'未分类';
+    dayStrs.forEach(ds=>{
+      const dayStart=new Date(ds+'T00:00:00');
+      const dayEnd=new Date(dayStart.getTime()+86400000);
+      const overlapStart=Math.max(range.start.getTime(),dayStart.getTime());
+      const overlapEnd=Math.min(range.end.getTime(),dayEnd.getTime());
+      if(overlapEnd<=overlapStart)return;
+      const mins=Math.round((overlapEnd-overlapStart)/60000);
+      if(mins<=0)return;
+      totalMins+=mins;
+      catMap[note]=(catMap[note]||0)+mins;
+    });
+  });
+
+  const cats=getContentTypeOptions().filter(c=>!isRangeCategory(c));
+  const CATEGORY_COLORS=['#3A6EA8','#2E7D52','#8B5CF6','#D97706','#DC2626','#0891B2','#BE185D','#65A30D'];
+  const colorMap={};cats.forEach((c,i)=>{colorMap[c]=CATEGORY_COLORS[i%CATEGORY_COLORS.length]});
+  const getColor=n=>colorMap[n]||'#94A3B8';
+
+  const buildHtml=(empty,pageKey)=>{
+    if(totalMins===0)return`<div style="font-size:12px;color:var(--muted);">${empty}</div>`;
+    const catEntries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+    const pageData=paginate(pageKey,catEntries);
+    const pagerId=pageKey==='pcWeekSummary'?'pc-week-summary-pager':'mob-week-summary-pager';
+    const catsHtml=pageData.items.map(([cat,mins])=>`
+      <div class="week-sum-cat-row">
+        <div class="week-sum-cat-dot" style="background:${getColor(cat)}"></div>
+        <span class="week-sum-cat-name">${escapeHtml(cat)}</span>
+        <span class="week-sum-cat-time">${fmtMinutes(mins)}</span>
+      </div>`).join('');
+    return`<div class="week-sum-wrap">
+      <div class="week-sum-total-row">
+        <span class="week-sum-total-label">本周总计</span>
+        <span class="week-sum-total-val">${fmtMinutes(totalMins)}</span>
+      </div>
+      <div class="week-sum-cats">${catsHtml}</div>
+      <div id="${pagerId}"></div>
+    </div>`;
+  };
+
+  const pcSum=$id('pc-week-summary');
+  if(pcSum){pcSum.innerHTML=buildHtml('本周暂无记录','pcWeekSummary');renderPager('pcWeekSummary',Object.keys(catMap).length,'pc-week-summary-pager')}
+  const mobSum=$id('mob-week-summary');
+  if(mobSum){mobSum.innerHTML=buildHtml('本周暂无记录','mobWeekSummary');renderPager('mobWeekSummary',Object.keys(catMap).length,'mob-week-summary-pager')}
+}
+
+// ── Article detail: 事项累计时长（下拉选择器模式，PC+手机）──
+function getArticleDetailSessions(){
+  const sessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s)).map(s=>({...s,content_note:normalizeCategoryValue(s.content_note)}));
+  if(statsCategoryFilter&&statsCategoryFilter!==STATS_FILTER_NO_PERIOD&&!isRangeCategory(statsCategoryFilter))return sessions.filter(s=>s.content_note===statsCategoryFilter);
+  return sessions.filter(s=>!isRangeCategory(s.content_note));
+}
+function updateArticleDetailTitle(){
+  const label=statsCategoryFilter&&statsCategoryFilter!==STATS_FILTER_NO_PERIOD&&!isRangeCategory(statsCategoryFilter)?`${statsCategoryFilter} · 事项累计时长`:'事项累计时长';
+  [$id('pc-article-detail-title'),$id('mob-article-detail-title')].forEach(el=>{if(el)el.textContent=label});
+}
+function renderArticleDetail(){
+  updateArticleDetailTitle();
+  const sessions=getArticleDetailSessions();
+
+  // Build artMap
+  const artMap={};
+  sessions.forEach(s=>{
+    const art=String(s.article_title||'').trim()||'（无事项名称）';
+    if(!artMap[art])artMap[art]={mins:0,count:0};
+    artMap[art].mins+=parseInt(s.duration_minutes)||0;
+    artMap[art].count++;
+  });
+  const entries=Object.entries(artMap).sort((a,b)=>b[1].mins-a[1].mins);
+  const totalMins=entries.reduce((a,[,v])=>a+v.mins,0);
+
+  // Populate both selectors
+  ['pc-article-sel','mob-article-sel'].forEach(selId=>{
+    const sel=$id(selId);
+    if(!sel)return;
+    const prevVal=sel.value;
+    if(!entries.length){
+      sel.innerHTML='<option value="">暂无记录</option>';
+      return;
+    }
+    sel.innerHTML=`<option value="__all__">全部事项（${fmtMinutes(totalMins)}）</option>`
+      +entries.map(([art,data])=>`<option value="${escapeHtml(art)}">${escapeHtml(art)} · ${fmtMinutes(data.mins)}</option>`).join('');
+    if(prevVal&&[...sel.options].some(o=>o.value===prevVal))sel.value=prevVal;
+    else sel.value='__all__';
+  });
+
+  // Render detail for both
+  _renderArticleDetailContent(artMap,entries,totalMins);
+}
+
+function renderArticleDetailSelected(){
+  // Rebuild data then render
+  updateArticleDetailTitle();
+  const sessions=getArticleDetailSessions();
+  const artMap={};
+  sessions.forEach(s=>{
+    const art=String(s.article_title||'').trim()||'（无事项名称）';
+    if(!artMap[art])artMap[art]={mins:0,count:0};
+    artMap[art].mins+=parseInt(s.duration_minutes)||0;
+    artMap[art].count++;
+  });
+  const entries=Object.entries(artMap).sort((a,b)=>b[1].mins-a[1].mins);
+  const totalMins=entries.reduce((a,[,v])=>a+v.mins,0);
+  _renderArticleDetailContent(artMap,entries,totalMins);
+}
+
+function handleArticleDetailSelect(){
+  resetPages(['pcArticle','mobArticle']);
+  renderArticleDetailSelected();
+}
+
+function _renderArticleDetailContent(artMap,entries,totalMins){
+  // PC
+  const pcSel=$id('pc-article-sel');
+  const pcEl=$id('pc-article-detail');
+  // Mobile
+  const mobSel=$id('mob-article-sel');
+  const mobEl=$id('mob-article-detail');
+
+  [{sel:pcSel,el:pcEl,mobile:false},{sel:mobSel,el:mobEl,mobile:true}].forEach(({sel,el,mobile})=>{
+    if(!el)return;
+    if(!entries.length){
+      el.innerHTML='<div style="font-size:12px;color:var(--muted);">暂无事项记录</div>';
+      return;
+    }
+    const selected=sel?sel.value:'__all__';
+    const displayEntries=selected==='__all__'?entries:entries.filter(([art])=>art===selected);
+    if(!displayEntries.length){el.innerHTML='';return;}
+    const pageKey=mobile?'mobArticle':'pcArticle';
+    const pagerId=mobile?'mob-article-pager':'pc-article-pager';
+    const pageData=paginate(pageKey,displayEntries);
+    const maxMins=displayEntries[0][1].mins||1;
+    const dispTotal=displayEntries.reduce((a,[,v])=>a+v.mins,0);
+    const countLabel=selected==='__all__'
+      ?`全部历史 · ${entries.length} 个事项 · 累计 ${fmtMinutes(totalMins)}`
+      :`全部历史 · 累计 ${fmtMinutes(dispTotal)}`;
+
+    if(mobile){
+      // Mobile: compact rows, no bar
+      el.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${countLabel}</div>`
+        +`<div style="display:flex;flex-direction:column;gap:6px;">`
+        +pageData.items.map(([art,data])=>`
+          <div class="mob-article-detail-row">
+            <span class="mob-article-detail-name" title="${escapeHtml(art)}">${escapeHtml(art)}</span>
+            <span class="mob-article-detail-time">${fmtMinutes(data.mins)}</span>
+            <span class="mob-article-detail-count">${data.count}次</span>
+          </div>`).join('')+`</div><div id="${pagerId}"></div>`;
+    } else {
+      // PC: with rank + bar
+      const rowsHtml=pageData.items.map(([art,data],i)=>`
+        <div class="article-detail-row">
+          <span class="article-detail-rank">${pageData.start+i+1}</span>
+          <span class="article-detail-name" title="${escapeHtml(art)}">${escapeHtml(art)}</span>
+          <div class="article-detail-bar-wrap">
+            <div class="article-detail-bar" style="width:${Math.round((data.mins/maxMins)*100)}%"></div>
+          </div>
+          <span class="article-detail-time">${fmtMinutes(data.mins)}</span>
+          <span class="article-detail-count">${data.count}次</span>
+        </div>`).join('');
+      el.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${countLabel}</div>
+        <div class="article-detail-list">${rowsHtml}</div><div id="${pagerId}"></div>`;
+    }
+    renderPager(pageKey,displayEntries.length,pagerId);
+  });
+}
+
+function showGanttTip(e,el){
+  const tip=$id('week-gantt-tooltip');
+  if(!tip)return;
+  tip.textContent=el.dataset.tip;
+  tip.style.display='block';
+  tip.style.left=(e.clientX+12)+'px';
+  tip.style.top=(e.clientY-28)+'px';
+}
+function hideGanttTip(){
+  const tip=$id('week-gantt-tooltip');
+  if(tip)tip.style.display='none';
+}
+
+function renderHeatmap(yr,dayMap){
+  // Reset day detail panel whenever heatmap re-renders (year/filter change)
+  const detailPanel=$id('pc-heatmap-day-detail');
+  if(detailPanel){detailPanel.style.display='none';detailPanel.dataset.activeDate='';}
+  const detailPager=$id('pc-heatmap-day-pager');
+  if(detailPager)detailPager.innerHTML='';
+  const today=new Date(),isCurrentYear=yr===today.getFullYear(),todayDate=localDateStr(today);
+  function heatLevel(m){if(!m)return 0;if(m<30)return 1;if(m<60)return 2;if(m<120)return 3;return 4}
+  const monthNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  // PC heatmap — cells are clickable
+  const pcHM=$id('pc-heatmap');
+  if(pcHM)pcHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="heatmap-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const mins=(dayMap[ds]||{}).minutes||0;const isFuture=isCurrentYear&&ds>todayDate;const lvl=heatLevel(mins);const tip=mins?`${ds}: ${fmtHours(mins)}`:(isFuture?`${ds}: 未到该日期`:`${ds}: 无记录`);const isToday=ds===todayDate?'outline:2px solid var(--accent);outline-offset:1px;':'';const clickable=(!isFuture||mins>0)?`onclick="showHeatmapDayDetail('${ds}')" style="${isToday}cursor:pointer;" `:`style="${isToday}"`;cells.push(`<div class="heatmap-cell" data-lvl="${lvl}" ${clickable}title="${escapeHtml(tip)}"></div>`)}return`<div class="heatmap-row"><div class="heatmap-month-tag">${name}</div><div class="heatmap-days">${cells.join('')}</div></div>`}).join('');
+  // Mobile heatmap — tooltip only (cells too small to click comfortably)
+  const mHM=$id('mob-heatmap');
+  if(mHM)mHM.innerHTML=monthNames.map((name,mi)=>{const dim=new Date(yr,mi+1,0).getDate();const cells=[];for(let d=1;d<=31;d++){if(d>dim){cells.push('<div class="mob-hm-cell" data-future="1"></div>');continue}const ds=`${yr}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const mins=(dayMap[ds]||{}).minutes||0;const isFuture=isCurrentYear&&ds>todayDate;const lvl=heatLevel(mins);const isToday=ds===todayDate?'outline:1.5px solid var(--accent);outline-offset:1px;':'';const tip=mins?`${ds}: ${fmtHours(mins)}`:(isFuture?`${ds}: 未到该日期`:`${ds}: 无记录`);cells.push(`<div class="mob-hm-cell" data-l="${lvl}" style="${isToday}" title="${escapeHtml(tip)}"></div>`)}return`<div class="mob-hm-row"><div class="mob-hm-label">${name}</div><div class="mob-hm-days">${cells.join('')}</div></div>`}).join('');
+}
+function showHeatmapDayDetail(ds,keepOpen=false){
+  const panel=$id('pc-heatmap-day-detail');
+  const titleEl=$id('pc-heatmap-day-title');
+  const listEl=$id('pc-heatmap-day-list');
+  if(!panel||!titleEl||!listEl)return;
+  // If clicking same date again, toggle off
+  if(!keepOpen&&panel.dataset.activeDate===ds&&panel.style.display!=='none'){panel.style.display='none';panel.dataset.activeDate='';return}
+  if(panel.dataset.activeDate!==ds)paginationState.pcHeatmapDay=1;
+  panel.dataset.activeDate=ds;
+  const sessions=getSessions().filter(s=>s.status==='completed'&&expandSessionToDayMinutes({...s,date:normalizeDateValue(s.date)}).some(entry=>entry.date===ds&&entry.minutes>0)).sort((a,b)=>(formatRecordPrimary(a)||'').localeCompare(formatRecordPrimary(b)||''));
+  titleEl.textContent=`${ds} 的学习记录`;
+  if(!sessions.length){
+    listEl.innerHTML='<div style="font-size:12px;color:var(--muted);">当天无学习记录</div>';
+    renderPager('pcHeatmapDay',0,'pc-heatmap-day-pager');
+  } else {
+    const pageData=paginate('pcHeatmapDay',sessions);
+    listEl.innerHTML=pageData.items.map(s=>`<div style="display:flex;align-items:center;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border-light);">
+      <span style="color:var(--muted);font-family:'DM Mono',monospace;min-width:110px;">${escapeHtml(formatRecordPrimary(s))}</span>
+      <span style="font-weight:600;min-width:50px;">${escapeHtml(formatRecordDuration(s))}</span>
+      ${s.content_note?`<span class="badge badge-note">${escapeHtml(s.content_note)}</span>`:''}
+      <span style="color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.article_title||'')}</span>
+    </div>`).join('')
+    +`<div style="font-size:11px;color:var(--muted);margin-top:6px;">共 ${sessions.length} 条 · 合计 ${fmtMinutes(sessions.reduce((a,s)=>a+expandSessionToDayMinutes({...s,date:normalizeDateValue(s.date)}).filter(entry=>entry.date===ds).reduce((sum,entry)=>sum+entry.minutes,0),0))}</div>`;
+    renderPager('pcHeatmapDay',sessions.length,'pc-heatmap-day-pager');
+  }
+  panel.style.display='block';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function renderDailyBar(dayMap,titleSuffix=''){
+  const today=new Date(),month=today.getMonth();const dim=new Date(statsYear,month+1,0).getDate();
+  const days=[];for(let d=1;d<=dim;d++)days.push(`${statsYear}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  const vals=days.map(d=>(dayMap[d]||{}).minutes||0),maxV=DAILY_CHART_MAX_MINUTES;
+  [$id('pc-daily-chart-title'),$id('mob-daily-chart-title')].forEach(el=>{if(el)el.textContent=`${statsYear}年${month+1}月每日计时时长${titleSuffix}（满格 12h）`});
+  const html=vals.map((v,i)=>{const safeV=Math.min(v,maxV);const pct=(safeV/maxV)*100;const showLabel=(i===0)||((i+1)%5===0)||i===vals.length-1;return`<div class="bar-group"><div class="bar-track"><div class="bar-fill" data-chart="daily" data-label="${days[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${days[i]}: ${fmtHours(v)} / 12h" onclick="showBarDetail('daily',this)"></div></div><div class="bar-label">${showLabel?String(i+1):''}</div></div>`}).join('');
+  [$id('pc-bar-chart-daily'),$id('mob-bar-chart-daily')].forEach(el=>{if(el)el.innerHTML=html});
+  [$id('pc-daily-chart-detail'),$id('mob-daily-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值（按 12 小时固定刻度）'});
+}
+function renderMonthlyBar(yr,dayMap,titleSuffix=''){
+  const months=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const vals=months.map((_,m)=>{const p=`${yr}-${String(m+1).padStart(2,'0')}`;return Object.entries(dayMap).filter(([d])=>d.startsWith(p)).reduce((a,[,v])=>a+v.minutes,0)});
+  const maxV=MONTHLY_CHART_MAX_MINUTES;
+  [$id('pc-monthly-chart-title'),$id('mob-monthly-chart-title')].forEach(el=>{if(el)el.textContent=`${yr}年各月计时时长${titleSuffix}（满格 150h）`});
+  const html=vals.map((v,i)=>{const safeV=Math.min(v,maxV);const pct=(safeV/maxV)*100;return`<div class="bar-group"><div class="bar-track"><div class="bar-fill" data-chart="monthly" data-label="${months[i]}" data-value="${fmtHours(v)}" style="height:${Math.max(pct,v>0?2:0)}%;" title="${months[i]}: ${fmtHours(v)} / 150h" onclick="showBarDetail('monthly',this)"></div></div><div class="bar-label">${months[i].replace('月','')}</div></div>`}).join('');
+  [$id('pc-bar-chart-monthly'),$id('mob-bar-chart-monthly')].forEach(el=>{if(el)el.innerHTML=html});
+  [$id('pc-monthly-chart-detail'),$id('mob-monthly-chart-detail')].forEach(el=>{if(el)el.textContent='点击柱子查看具体数值（按 150 小时固定刻度）'});
+}
+function showBarDetail(type,element){
+  document.querySelectorAll(`.bar-fill[data-chart="${type}"]`).forEach(el=>el.classList.remove('active'));
+  element.classList.add('active');
+  const ids=type==='daily'?['pc-daily-chart-detail','mob-daily-chart-detail']:['pc-monthly-chart-detail','mob-monthly-chart-detail'];
+  ids.forEach(id=>{const el=$id(id);if(el)el.textContent=`${element.dataset.label}：${element.dataset.value}`});
+}
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+function showToast(msg,type=''){
+  const wrapId=isMobile()?'mob-toast-wrap':'pc-toast-wrap';
+  const wrap=$id(wrapId);
+  if(!wrap)return;
+  const el=document.createElement('div');
+  el.className=isMobile()?`mob-toast ${type}`:`toast-common ${type}`;
+  el.textContent=msg;wrap.appendChild(el);setTimeout(()=>el.remove(),2800);
+}
+
+function updateMobileDateFilterChip(){
+  const input=$id('mob-filter-date'),text=$id('mob-filter-date-text');
+  if(!input||!text)return;
+  text.textContent=input.value||'选择日期';
+}
+
+// ════════════════════════════════════════════════════════
+// LISTENERS
+// ════════════════════════════════════════════════════════
+$id('pc-filter-date').addEventListener('change',()=>{resetPages(['pcLog']);renderLog()});
+$id('pc-filter-note').addEventListener('change',()=>{resetPages(['pcLog']);renderLog()});
+$id('mob-filter-date').addEventListener('change',()=>{resetPages(['mobLog']);updateMobileDateFilterChip();renderLog()});
+$id('mob-filter-note').addEventListener('change',()=>{resetPages(['mobLog']);renderLog()});
+$id('pc-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;resetPages(['pcCategory','mobCategory','pcArticle','mobArticle','pcHeatmapDay']);renderStats()});
+$id('mob-stats-category-filter').addEventListener('change',function(){statsCategoryFilter=this.value;resetPages(['pcCategory','mobCategory','pcArticle','mobArticle','pcHeatmapDay']);renderStats()});
+forEachModalRoot(root=>{
+  ['m-start','m-end','m-date','m-end-date','m-range-start-time','m-range-end-time'].forEach(name=>{
+    const field=modalField(name,root);
+    if(field)field.addEventListener('change',()=>updateDurationPreview(root));
+  });
+  const noteSel=modalField('m-note-sel',root),noteInput=modalField('m-note-input',root);
+  if(noteSel&&noteInput)noteSel.addEventListener('change',function(){noteInput.style.display=this.value==='__custom__'?'':'none';if(this.value!=='__custom__')noteInput.value='';updateModalMode(root,getModalContentNote(root));updateDurationPreview(root)});
+});
+$id('pc-content-note-sel').addEventListener('change',function(){rememberContentTypeInputValue(this.value);updatePrimaryActionLabels()});
+$id('mob-content-note-sel').addEventListener('change',function(){rememberContentTypeInputValue(this.value);updatePrimaryActionLabels()});
+$id('pc-content-note-sel').addEventListener('input',updatePrimaryActionLabels);
+$id('mob-content-note-sel').addEventListener('input',updatePrimaryActionLabels);
+$id('pc-content-note-sel').addEventListener('blur',function(){rememberContentTypeInputValue(this.value);updatePrimaryActionLabels()});
+$id('mob-content-note-sel').addEventListener('blur',function(){rememberContentTypeInputValue(this.value);updatePrimaryActionLabels()});
+$id('pc-add-modal').addEventListener('click',function(e){if(e.target===this)closeAddModal()});
+$id('pc-content-type-modal').addEventListener('click',function(e){if(e.target===this)closeContentTypeManager()});
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function renderAll(){
+  renderToday();
+  const pcActiveTab=document.querySelector('.pc-tab-btn.active');
+  const mobActivePage=document.querySelector('.mob-page.active');
+  if(pcActiveTab?.dataset.tab==='log'||mobActivePage?.id==='mob-page-log')renderLog();
+  if(pcActiveTab?.dataset.tab==='stats'||mobActivePage?.id==='mob-page-stats')renderStats();
+}
+function checkStaleActiveSession(){
+  const active=getActive();
+  if(!active)return;
+  const today=todayStr();
+  if(normalizeDateValue(active.date)!==today){
+    // Session started on a different day — auto-discard and warn
+    saveActive(null);
+    showToast('上次计时跨天未结束，已自动清除，请重新补录','warning');
+  }
+}
+function init(){
+  hydratePreferencesFromSessions();refreshContentTypeUI();refreshArticleTitleUI();
+  initStatsYear();checkStaleActiveSession();updateTimerUI();updatePrimaryActionLabels();updateMobileDateFilterChip();
+  // Restore last used note/article into timer inputs (only if no active session)
+  if(!getActive()){
+    const last=getLastInput();
+    if(last.note&&!isRemovedContentType(last.note)){
+      ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{
+        const el=$id(id);if(el)el.value=last.note;
+      });
+      updatePrimaryActionLabels();
+    }
+    if(last.article&&!isRemovedArticleTitle(last.article)){
+      ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=last.article;});
+    }
+  }
+  renderAll();
+}
+init();
+</script>
+</body>
+</html>
