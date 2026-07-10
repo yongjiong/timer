@@ -604,7 +604,7 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
           </div>
           <div class="field-group">
             <label class="field-label">事项名称</label>
-            <input class="field-input" id="pc-article-title-input" placeholder="例：Training AI" list="article-title-options">
+            <input class="field-input" id="pc-article-title-input" placeholder="" list="article-title-options">
             <datalist id="article-title-options"></datalist>
           </div>
         </div>
@@ -810,7 +810,7 @@ tbody td { padding: 9px 10px; color: var(--ink); vertical-align: middle; }
             </div>
             <div class="mob-field-wrap">
               <div class="mob-field-lbl">事项名称</div>
-              <input class="field-input" id="mob-article-title-input" placeholder="例：Training AI" list="article-title-options" style="background:var(--surface2);padding:11px 12px;font-size:14px;">
+              <input class="field-input" id="mob-article-title-input" placeholder="" list="article-title-options" style="background:var(--surface2);padding:11px 12px;font-size:14px;">
             </div>
           </div>
           <div class="mob-cta-row">
@@ -995,9 +995,8 @@ const CONTENT_TYPE_KEY = 'english_content_types';
 const ARTICLE_TITLES_KEY = 'english_article_titles';
 const LAST_INPUT_KEY = 'english_last_input';
 const DEFAULT_CONTENT_NOTE_OPTIONS = [];
-const REMOVED_CONTENT_NOTE_OPTIONS = ['英语学习','网球','打网球'];
-const REMOVED_ARTICLE_TITLES = ['The search for oil'];
-const LEGACY_ENGLISH_CATEGORIES = ['影子跟读','文章串联','背诵全文','知识沉淀','逐句解析'];
+const REMOVED_CONTENT_NOTE_OPTIONS = [];
+const REMOVED_ARTICLE_TITLES = [];
 const STATS_FILTER_ALL = '';
 const STATS_FILTER_NO_PERIOD = '__exclude_period__';
 const CONTENT_TYPE_SUGGESTION_LIMIT = 6;
@@ -1033,7 +1032,7 @@ function getSessions(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||
 function saveSessions(a){localStorage.setItem(STORAGE_KEY,JSON.stringify(a))}
 function getActive(){try{return JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null')}catch{return null}}
 function saveActive(o){if(o)localStorage.setItem(ACTIVE_KEY,JSON.stringify(o));else localStorage.removeItem(ACTIVE_KEY)}
-function normalizeCategoryValue(v){const t=String(v||'').trim();if(LEGACY_ENGLISH_CATEGORIES.includes(t))return'英语学习';if(t==='月经')return'Period';return t}
+function normalizeCategoryValue(v){return String(v||'').trim()}
 function normalizeDateValue(v){const t=String(v||'').trim();if(!t)return'';const n=t.replace(/[./]/g,'-').replace(/年/g,'-').replace(/月/g,'-').replace(/日/g,'').replace(/\s+/g,'');const m=n.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(!m)return t;return`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`}
 function isRemovedContentType(v){return REMOVED_CONTENT_NOTE_OPTIONS.includes(normalizeCategoryValue(v))}
 function isRemovedArticleTitle(v){return REMOVED_ARTICLE_TITLES.includes(String(v||'').trim())}
@@ -1855,10 +1854,11 @@ function renderWeekHourHeatmap(){
 
   // Color palette
   const CATEGORY_COLORS=['#3A6EA8','#2E7D52','#8B5CF6','#D97706','#DC2626','#0891B2','#BE185D','#65A30D'];
+  const CATEGORY_COLOR_OVERRIDES={'英语学习':'#4F9CF9'};
   const colorMap={};
   const cats=getContentTypeOptions().filter(c=>!isRangeCategory(c));
   cats.forEach((c,i)=>{colorMap[c]=CATEGORY_COLORS[i%CATEGORY_COLORS.length]});
-  function getCatColor(note){return note&&colorMap[note]?colorMap[note]:'#94A3B8';}
+  function getCatColor(note){return note&&CATEGORY_COLOR_OVERRIDES[note]?CATEGORY_COLOR_OVERRIDES[note]:(note&&colorMap[note]?colorMap[note]:'#94A3B8');}
 
   // Collect sessions for this week
   const allSessions=getSessions().filter(s=>s.status==='completed'&&!isRangeRecord(s));
