@@ -995,6 +995,7 @@ const CONTENT_TYPE_KEY = 'english_content_types';
 const ARTICLE_TITLES_KEY = 'english_article_titles';
 const LAST_INPUT_KEY = 'english_last_input';
 const DEFAULT_CONTENT_NOTE_OPTIONS = [];
+const FIRST_USE_INPUT = {note:'健身',article:'跑步'};
 const REMOVED_CONTENT_NOTE_OPTIONS = [];
 const REMOVED_ARTICLE_TITLES = [];
 const STATS_FILTER_ALL = '';
@@ -2303,14 +2304,17 @@ function init(){
   // Restore last used note/article into timer inputs (only if no active session)
   if(!getActive()){
     const last=getLastInput();
-    if(last.note&&!isRemovedContentType(last.note)){
+    const hasLastInput=Object.prototype.hasOwnProperty.call(last,'note')||Object.prototype.hasOwnProperty.call(last,'article');
+    const note=hasLastInput?(last.note||''):FIRST_USE_INPUT.note;
+    const article=hasLastInput?(last.article||''):FIRST_USE_INPUT.article;
+    if(note){
       ['pc-content-note-sel','mob-content-note-sel'].forEach(id=>{
-        const el=$id(id);if(el)el.value=last.note;
+        const el=$id(id);if(el)el.value=note;
       });
       updatePrimaryActionLabels();
     }
-    if(last.article&&!isRemovedArticleTitle(last.article)){
-      ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=last.article;});
+    if(article){
+      ['pc-article-title-input','mob-article-title-input'].forEach(id=>{const el=$id(id);if(el)el.value=article;});
     }
   }
   renderAll();
